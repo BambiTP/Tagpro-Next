@@ -95,7 +95,7 @@
     
     // Create a texture for the floor tile.
     // Floor: 2 to the right on the 5th row -> (2 * 40, 4 * 40) = (80, 160)
-    var floorTexture = new PIXI.Texture(baseTexture, new PIXI.Rectangle(80, 160, 40, 40));
+    var floorTexture = new PIXI.Texture(baseTexture, new PIXI.Rectangle(40, 160, 40, 40));
     
     // Create a TilingSprite for the floor to cover an 800×600 area.
     var floorSprite = new PIXI.TilingSprite(floorTexture, 800, 600);
