@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TagPro Physics with Box2dWeb & PixiJS - Camera Follow</title>
+  <style>
+    body {
+      margin: 0;
+      background: #202020;
+      overflow: hidden; /* Prevent scrolling */
+    }
+  </style>
+</head>
+<body>
+  <!-- Load local copies from your folder -->
+  <script src="pixi.min.js"></script>
+  <script src="Box2d.min.js"></script>
+  
+  <script>
+    /****************************************************
+     * CONSTANTS & SETUP
+     ****************************************************/
+    // 1 TPU = 100 pixels.
+    var PIXELS_PER_TPU = 100;
+    // Base time step (60 FPS).
+    var baseDT = 1 / 60;
+    
+    // TagPro physics parameters (in TPU units):
+    // When a key is held, acceleration = 1.5 TPU/s² per axis.
+    // Drag acts as a deceleration proportional to velocity: 0.5 × currentSpeed.
+    // Maximum speed per axis: 2.5 TPU/s.
+    var ACCELERATION = 1.5; // TPU/s²
+    var MAX_SPEED = 2.5;    // TPU/s
+    var DRAG = 0.5;         // per second
+    
+    // Ball dimensions: 38 px diameter (radius = 19 px).
+    // Convert radius to TPU units.
+    var ballRadiusTPU = 19 / PIXELS_PER_TPU;
+    
+    /****************************************************
+     * BOX2D SETUP (Box2dWeb)
+     ****************************************************/
+    // Aliases for Box2dWeb classes.
+    var b2Vec2 = Box2D.Common.Math.b2Vec2,
+        b2BodyDef = Box2D.Dynamics.b2BodyDef,
+        b2Body = Box2D.Dynamics.b2Body,
+        b2FixtureDef = Box2D.Dynamics.b2FixtureDef,
+        b2World = Box2D.Dynamics.b2World,
+        b2CircleShape = Box2D.Collision.Shapes.b2CircleShape;
+    
+    // Create a Box2D world with zero gravity (top-down view).
+    var world = new b2World(new b2Vec2(0, 0), true);
+    
+    // Create the ball body.
+    var bodyDef = new b2BodyDef();
+    bodyDef.type = b2Body.b2_dynamicBody;
+    // Start at the center of an 800×600 world (converted to TPU).
+    bodyDef.position.Set(800/(2*PIXELS_PER_TPU), 600/(2*PIXELS_PER_TPU));
+    var ballBody = world.CreateBody(bodyDef);
+    
+    // Define the ball fixture.
+    var fixDef = new b2FixtureDef();
+    fixDef.shape = new b2CircleShape(ballRadiusTPU);
+    fixDef.density = 1.0;
+    fixDef.friction = 0.3;
+    fixDef.restitution = 0.2;
+    ballBody.CreateFixture(fixDef);
+    
+    /****************************************************
+     * PIXI SETUP (Rendering)
+     ****************************************************/
+    // Create a PixiJS Application with a 1280x800 canvas.
+    var app = new PIXI.Application({
+      width: 1280,
+      height: 800,
+      backgroundColor: 0x303030,
+      resolution: window.devicePixelRatio || 1,
+      autoDensity: true,
+    });
+    document.body.appendChild(app.view);
+    
+    // Create a container for the world that we can move to simulate a camera.
+    var worldContainer = new PIXI.Container();
+    app.stage.addChild(worldContainer);
+    
+    // Draw a grid with 40×40 pixel cells.
+    var gridGraphics = new PIXI.Graphics();
+    gridGraphics.lineStyle(1, 0x505050, 1);
+    // Draw a grid that covers a larger world (e.g., 800x600 world in pixels).
+    // If your world is larger, adjust accordingly.
+    for (var x = 0; x <= 800; x += 40) {
+      gridGraphics.moveTo(x, 0);
+      gridGraphics.lineTo(x, 600);
+    }
+    for (var y = 0; y <= 600; y += 40) {
+      gridGraphics.moveTo(0, y);
+      gridGraphics.lineTo(800, y);
+    }
+    worldContainer.addChild(gridGraphics);
+    
+    // Create a PixiJS Graphics object for the ball.
+    var ballGraphics = new PIXI.Graphics();
+    ballGraphics.beginFill(0xC83232);
+    ballGraphics.drawCircle(0, 0, 19); // 38px diameter
+    ballGraphics.endFill();
+    // Set its initial position.
+    ballGraphics.x = ballBody.GetPosition().x * PIXELS_PER_TPU;
+    ballGraphics.y = ballBody.GetPosition().y * PIXELS_PER_TPU;
+    worldContainer.addChild(ballGraphics);
+    
+    /****************************************************
+     * INPUT HANDLING
+     ****************************************************/
+    // Global keys object.
+    var keys = {};
+    window.addEventListener("keydown", function(e) {
+      // Prevent default arrow key actions.
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].indexOf(e.key) !== -1) {
+        e.preventDefault();
+      }
+      keys[e.key] = true;
+    });
+    window.addEventListener("keyup", function(e) {
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].indexOf(e.key) !== -1) {
+        e.preventDefault();
+      }
+      keys[e.key] = false;
+    });
+    
+    /****************************************************
+     * GAME LOOP
+     ****************************************************/
+    app.ticker.add(function(delta) {
+      var frameTime = baseDT * delta;
+      
+      // Determine acceleration based on keys:
+      var ax = 0, ay = 0;
+      if (keys["ArrowLeft"] || keys["a"] || keys["A"]) {
+        ax = -ACCELERATION;
+      }
+      if (keys["ArrowRight"] || keys["d"] || keys["D"]) {
+        ax = ACCELERATION;
+      }
+      if (keys["ArrowUp"] || keys["w"] || keys["W"]) {
+        ay = -ACCELERATION;
+      }
+      if (keys["ArrowDown"] || keys["s"] || keys["S"]) {
+        ay = ACCELERATION;
+      }
+      
+      // Get current velocity.
+      var velocity = ballBody.GetLinearVelocity();
+      var vx = velocity.x;
+      var vy = velocity.y;
+      
+      // Compute net force: F = mass * (acceleration - DRAG * velocity)
+      var mass = ballBody.GetMass();
+      var forceX = mass * (ax - DRAG * vx);
+      var forceY = mass * (ay - DRAG * vy);
+      
+      ballBody.ApplyForce(new b2Vec2(forceX, forceY), ballBody.GetWorldCenter());
+      
+      // Step the simulation.
+      world.Step(frameTime, 8, 3);
+      world.ClearForces();
+      
+      // Clamp velocity.
+      velocity = ballBody.GetLinearVelocity();
+      vx = velocity.x;
+      vy = velocity.y;
+      if (vx > MAX_SPEED) vx = MAX_SPEED;
+      if (vx < -MAX_SPEED) vx = -MAX_SPEED;
+      if (vy > MAX_SPEED) vy = MAX_SPEED;
+      if (vy < -MAX_SPEED) vy = -MAX_SPEED;
+      ballBody.SetLinearVelocity(new b2Vec2(vx, vy));
+      
+      // Update the ball's world position.
+      var pos = ballBody.GetPosition();
+      ballGraphics.x = pos.x * PIXELS_PER_TPU;
+      ballGraphics.y = pos.y * PIXELS_PER_TPU;
+      
+      // --- Camera Follow ---
+      // Center the world container so that the ball is in the middle of the screen.
+      // The camera offset is calculated from the canvas size.
+      worldContainer.x = app.screen.width / 2 - ballGraphics.x;
+      worldContainer.y = app.screen.height / 2 - ballGraphics.y;
+    });
+  </script>
+</body>
+</html>
