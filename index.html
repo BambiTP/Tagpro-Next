@@ -83,30 +83,32 @@
     var worldContainer = new PIXI.Container();
     app.stage.addChild(worldContainer);
     
-    // Draw a grid with 40×40 pixel cells.
-    var gridGraphics = new PIXI.Graphics();
-    gridGraphics.lineStyle(1, 0x505050, 1);
-    // Draw a grid that covers a larger world (e.g., 800x600 world in pixels).
-    // If your world is larger, adjust accordingly.
-    for (var x = 0; x <= 800; x += 40) {
-      gridGraphics.moveTo(x, 0);
-      gridGraphics.lineTo(x, 600);
-    }
-    for (var y = 0; y <= 600; y += 40) {
-      gridGraphics.moveTo(0, y);
-      gridGraphics.lineTo(800, y);
-    }
-    worldContainer.addChild(gridGraphics);
+    // ---------------------------
+    // TEXTURE SETUP
+    // ---------------------------
+    // Create a base texture from the tilesheet.
+    var baseTexture = PIXI.BaseTexture.from("tiles.png");
     
-    // Create a PixiJS Graphics object for the ball.
-    var ballGraphics = new PIXI.Graphics();
-    ballGraphics.beginFill(0xC83232);
-    ballGraphics.drawCircle(0, 0, 19); // 38px diameter
-    ballGraphics.endFill();
+    // Create a texture for the ball.
+    // Ball: 3 to the right on the first row -> (3 * 40, 0 * 40) = (120, 0)
+    var ballTexture = new PIXI.Texture(baseTexture, new PIXI.Rectangle(120, 0, 40, 40));
+    
+    // Create a texture for the floor tile.
+    // Floor: 2 to the right on the 5th row -> (2 * 40, 4 * 40) = (80, 160)
+    var floorTexture = new PIXI.Texture(baseTexture, new PIXI.Rectangle(80, 160, 40, 40));
+    
+    // Create a TilingSprite for the floor to cover an 800×600 area.
+    var floorSprite = new PIXI.TilingSprite(floorTexture, 800, 600);
+    worldContainer.addChild(floorSprite);
+    
+    // Create a Sprite for the ball.
+    var ballSprite = new PIXI.Sprite(ballTexture);
+    // Set the anchor to the center so that its position is centered.
+    ballSprite.anchor.set(0.5);
     // Set its initial position.
-    ballGraphics.x = ballBody.GetPosition().x * PIXELS_PER_TPU;
-    ballGraphics.y = ballBody.GetPosition().y * PIXELS_PER_TPU;
-    worldContainer.addChild(ballGraphics);
+    ballSprite.x = ballBody.GetPosition().x * PIXELS_PER_TPU;
+    ballSprite.y = ballBody.GetPosition().y * PIXELS_PER_TPU;
+    worldContainer.addChild(ballSprite);
     
     /****************************************************
      * INPUT HANDLING
@@ -176,14 +178,13 @@
       
       // Update the ball's world position.
       var pos = ballBody.GetPosition();
-      ballGraphics.x = pos.x * PIXELS_PER_TPU;
-      ballGraphics.y = pos.y * PIXELS_PER_TPU;
+      ballSprite.x = pos.x * PIXELS_PER_TPU;
+      ballSprite.y = pos.y * PIXELS_PER_TPU;
       
       // --- Camera Follow ---
       // Center the world container so that the ball is in the middle of the screen.
-      // The camera offset is calculated from the canvas size.
-      worldContainer.x = app.screen.width / 2 - ballGraphics.x;
-      worldContainer.y = app.screen.height / 2 - ballGraphics.y;
+      worldContainer.x = app.screen.width / 2 - ballSprite.x;
+      worldContainer.y = app.screen.height / 2 - ballSprite.y;
     });
   </script>
 </body>
