@@ -512,7 +512,7 @@
      * with strength = 0.25.
      ****************************************************/
     function createExplosionAt(position, dyingBody) {
-      var blastRadius = 0.4 * 4; // 1.6 TPU
+      var blastRadius = 0.4 * 5; // 1.6 TPU
       var strength = 2;
       var body = world.GetBodyList();
       while (body) {
@@ -562,7 +562,7 @@
           if (!dataB.canMove) return; // If ball B is dead, don't tag.
           // Ball A (flag carrier) dies.
           dataA.canMove = false;
-          var audio = new Audio("pop.mp3");
+          var audio = new Audio("friendlydrop.mp3");
           audio.play();
           createExplosionAt(bodyA.GetPosition(), bodyA);
           
@@ -585,7 +585,7 @@
         } else if (dataB.hasFlag && !dataA.hasFlag) {
           if (!dataA.canMove) return; // If ball A is dead, don't tag.
           dataB.canMove = false;
-          var audio = new Audio("pop.mp3");
+          var audio = new Audio("drop.mp3");
           audio.play();
           createExplosionAt(bodyB.GetPosition(), bodyB);
           
@@ -804,6 +804,9 @@
             new PIXI.Rectangle(520, 80, 40, 40)
           );
           console.log("Controlled ball picked up the flag!");
+          // Play friendly sound for controlled ball.
+          var audio = new Audio("friendlyalert.mp3");
+          audio.play();
         }
         
         // Check non-controlled ball if flag still not taken.
@@ -821,6 +824,9 @@
               new PIXI.Rectangle(520, 80, 40, 40)
             );
             console.log("Non-controlled ball picked up the flag!");
+            // Play alert sound for non-controlled ball.
+            var audio = new Audio("alert.mp3");
+            audio.play();
           }
         }
       }
