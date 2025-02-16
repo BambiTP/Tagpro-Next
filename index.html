@@ -7,11 +7,9 @@
     html, body {
       height: 100%;
       margin: 0;
-      /* Use background.jpg for the entire page */
       background: url("background.jpg") no-repeat center center fixed;
       background-size: cover;
     }
-    /* Center the canvas using Flexbox */
     body {
       display: flex;
       justify-content: center;
@@ -28,298 +26,309 @@
     /****************************************************
      * CONSTANTS & MAP SETUP
      ****************************************************/
-    const TILE_SIZE = 40;         // each tile is 40×40 pixels
-    const QUAD_SIZE = TILE_SIZE / 2; // each quadrant is 20×20 pixels
+    const TILE_SIZE = 40;         // Each tile is 40×40 pixels.
+    const QUAD_SIZE = TILE_SIZE / 2; // Each quadrant is 20×20 pixels.
 
     // In our tile map:
-    //   1 = floor tile (drawn using source (520,160) from the spritesheet)
-    //   2 = wall (square wall: wallSolids = 0xff)
-    //   3 = wall top left (wallSolids = 0xd2)
-    //   4 = wall top right (wallSolids = 0x4b)
-    //   5 = wall bottom left (wallSolids = 0xb4)
+    //   1-5 = wall tiles
+    //   6   = floor tile
     var tileMap = [
-      [1,1,1,1,1,1,1],
-      [1,2,2,2,2,2,1],
-      [1,2,3,2,4,2,1],
-      [1,2,5,2,2,2,1],
-      [1,2,2,2,2,2,1],
-      [1,1,1,1,1,1,1]
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     ];
     
     // Mapping from tile code to wall properties.
     var wallTypes = {
+      1: { wallSolids: 0xff },
       2: { wallSolids: 0xff },
       3: { wallSolids: 0xd2 },
       4: { wallSolids: 0x4b },
-      5: { wallSolids: 0xb4 }
+      5: { wallSolids: 0xb4 },
     };
-    
-    // Helper: Return the wallSolids value for the tile at (col, row) or 0.
+
+    // Floor tile is stored under key 6.
+    var tiles = {
+      6: { sx: 520, sy: 160 }
+    };
+
     function wallSolidsAt(col, row) {
       if(col < 0 || row < 0 || row >= tileMap.length || col >= tileMap[0].length) return 0;
       var code = tileMap[row][col];
-      if(code === 1) return 0; // floor
+      if(code === 6) return 0;
       var wt = wallTypes[code];
       return wt ? wt.wallSolids : 0;
     }
     
-    // -------------------------
-    // Your quadrantCoords (DO NOT EDIT)
-    // -------------------------
+    // Predefined quadrant coordinates (DO NOT EDIT)
     var quadrantCoords = {
-		"132": [10.5, 7.5],
-		"232": [11, 7.5],
-		"332": [11, 8],
-		"032": [10.5, 8],
-		"132d": [0.5, 3.5],
-		"232d": [1, 3.5],
-		"032d": [0.5, 4],
-		"143": [4.5, 9.5],
-		"243": [5, 9.5],
-		"343": [5, 10],
-		"043": [4.5, 10],
-		"143d": [1.5, 2.5],
-		"243d": [2, 2.5],
-		"043d": [1.5, 3],
-		"154": [6.5, 9.5],
-		"254": [7, 9.5],
-		"354": [7, 10],
-		"054": [6.5, 10],
-		"154d": [9.5, 2.5],
-		"254d": [10, 2.5],
-		"354d": [10, 3],
-		"165": [0.5, 7.5],
-		"265": [1, 7.5],
-		"365": [1, 8],
-		"065": [0.5, 8],
-		"165d": [10.5, 3.5],
-		"265d": [11, 3.5],
-		"365d": [11, 4],
-		"176": [1.5, 6.5],
-		"276": [2, 6.5],
-		"376": [2, 7],
-		"076": [1.5, 7],
-		"276d": [9, 1.5],
-		"376d": [9, 2],
-		"076d": [8.5, 2],
-		"107": [6.5, 8.5],
-		"207": [7, 8.5],
-		"307": [7, 9],
-		"007": [6.5, 9],
-		"207d": [11, 1.5],
-		"307d": [11, 2],
-		"007d": [10.5, 2],
-		"110": [4.5, 8.5],
-		"210": [5, 8.5],
-		"310": [5, 9],
-		"010": [4.5, 9],
-		"110d": [0.5, 1.5],
-		"310d": [1, 2],
-		"010d": [0.5, 2],
-		"121": [9.5, 6.5],
-		"221": [10, 6.5],
-		"321": [10, 7],
-		"021": [9.5, 7],
-		"121d": [2.5, 1.5],
-		"321d": [3, 2],
-		"021d": [2.5, 2],
-		"142": [1.5, 7.5],
-		"242": [2, 7.5],
-		"042": [1.5, 8],
-		"142d": [10.5, 0.5],
-		"242d": [11, 0.5],
-		"042d": [10.5, 1],
-		"153": [5.5, 6.5],
-		"253": [6, 6.5],
-		"353": [6, 7],
-		"053": [5.5, 7],
-		"153d": [5.5, 0.5],
-		"253d": [6, 0.5],
-		"164": [9.5, 7.5],
-		"264": [10, 7.5],
-		"364": [10, 8],
-		"164d": [0.5, 0.5],
-		"264d": [1, 0.5],
-		"364d": [1, 1],
-		"175": [4.5, 5.5],
-		"275": [5, 5.5],
-		"375": [5, 6],
-		"075": [4.5, 6],
-		"275d": [7, 1.5],
-		"375d": [7, 2],
-		"206": [4, 9.5],
-		"306": [4, 10],
-		"006": [3.5, 10],
-		"206d": [2, 3.5],
-		"306d": [2, 4],
-		"006d": [1.5, 4],
-		"117": [5.5, 2.5],
-		"217": [6, 2.5],
-		"317": [6, 4],
-		"017": [5.5, 4],
-		"317d": [6, 3],
-		"017d": [5.5, 3],
-		"120": [7.5, 9.5],
-		"320": [8, 10],
-		"020": [7.5, 10],
-		"120d": [9.5, 3.5],
-		"320d": [10, 4],
-		"020d": [9.5, 4],
-		"131": [6.5, 5.5],
-		"231": [7, 5.5],
-		"331": [7, 6],
-		"031": [6.5, 6],
-		"131d": [4.5, 1.5],
-		"031d": [4.5, 2],
-		"141": [7.5, 8.5],
-		"241": [8, 8.5],
-		"323": [4, 5],
-		"041": [7.5, 9],
-		"141d": [8.5, 3.5],
-		"041d": [8.5, 4],
-		"152": [8.5, 7.5],
-		"252": [9, 7.5],
-		"334": [2, 0],
-		"052": [8.5, 8],
-		"152d": [3.5, 0.5],
-		"252d": [4, 0.5],
-		"163": [2.5, 7.5],
-		"263": [3, 7.5],
-		"363": [3, 8],
-		"045": [9.5, 0],
-		"163d": [7.5, 0.5],
-		"263d": [8, 0.5],
-		"174": [3.5, 8.5],
-		"274": [4, 8.5],
-		"374": [4, 9],
-		"056": [7.5, 5],
-		"274d": [3, 3.5],
-		"374d": [3, 4],
-		"167": [7.5, 6.5],
-		"205": [10, 8.5],
-		"305": [10, 9],
-		"005": [9.5, 9],
-		"205d": [2, 0.5],
-		"305d": [2, 1],
-		"170": [6.5, 7.5],
-		"216": [9, 9.5],
-		"316": [9, 10],
-		"016": [8.5, 10],
-		"316d": [10, 5],
-		"016d": [9.5, 5],
-		"127": [2.5, 9.5],
-		"201": [5, 7.5],
-		"327": [3, 10],
-		"027": [2.5, 10],
-		"327d": [2, 5],
-		"027d": [1.5, 5],
-		"130": [1.5, 8.5],
-		"212": [4, 6.5],
-		"330": [2, 9],
-		"030": [1.5, 9],
-		"130d": [9.5, 0.5],
-		"030d": [9.5, 1],
-		"151": [10.5, 9.5],
-		"251": [11, 9.5],
-		"324": [0, 7],
-		"051": [10.5, 10],
-		"151d": [10.5, 4.5],
-		"324d": [0, 0],
-		"162": [8.5, 10.5],
-		"262": [9, 10.5],
-		"335": [6, 8],
-		"035": [5.5, 8],
-		"162d": [3.5, 2.5],
-		"262d": [8, 2.5],
-		"173": [0.5, 9.5],
-		"273": [1, 9.5],
-		"373": [1, 10],
-		"046": [11.5, 7],
-		"046d": [11.5, 0],
-		"273d": [1, 4.5],
-		"157": [11.5, 8.5],
-		"204": [0, 5.5],
-		"304": [0, 5],
-		"057": [11.5, 9],
-		"204d": [0, 4.5],
-		"304d": [0, 6],
-		"160": [11.5, 7.5],
-		"215": [8, 6.5],
-		"315": [8, 7],
-		"015": [7.5, 7],
-		"160d": [2.5, 4.5],
-		"315d": [9, 3],
-		"171": [5.5, 10.5],
-		"271": [6, 10.5],
-		"326": [6, 5],
-		"026": [5.5, 5],
-		"326d": [7, 5],
-		"026d": [4.5, 5],
-		"137": [3.5, 6.5],
-		"202": [0, 7.5],
-		"337": [4, 7],
-		"037": [3.5, 7],
-		"202d": [9, 4.5],
-		"037d": [2.5, 3],
-		"140": [11.5, 5.5],
-		"213": [0, 8.5],
-		"313": [0, 9],
-		"040": [11.5, 5],
-		"140d": [11.5, 4.5],
-		"040d": [11.5, 6],
-		"161": [9.5, 10.5],
-		"261": [10, 10.5],
-		"325": [9, 6],
-		"025": [8.5, 6],
-		"161d": [3.5, 1.5],
-		"325d": [4, 1],
-		"172": [1.5, 10.5],
-		"272": [2, 10.5],
-		"336": [3, 6],
-		"036": [2.5, 6],
-		"036d": [7.5, 1],
-		"272d": [8, 1.5],
-		"147": [4.5, 7.5],
-		"203": [4, 3.5],
-		"303": [4, 4],
-		"047": [4.5, 8],
-		"047d": [8.5, 5],
-		"203d": [8, 4.5],
-		"150": [7.5, 3.5],
-		"214": [7, 7.5],
-		"314": [7, 8],
-		"050": [7.5, 4],
-		"150d": [3.5, 4.5],
-		"314d": [3, 5],
-		"100": [5.5, 5.5],
-		"200": [6, 5.5],
-		"300": [6, 6],
-		"000": [5.5, 6],
-		"100d": [5.5, 8.5],
-		"200d": [6, 8.5],
-		"300d": [6, 10],
-		"000d": [5.5, 10]
-	};
+      "132": [10.5, 7.5],
+      "232": [11, 7.5],
+      "332": [11, 8],
+      "032": [10.5, 8],
+      "132d": [0.5, 3.5],
+      "232d": [1, 3.5],
+      "032d": [0.5, 4],
+      "143": [4.5, 9.5],
+      "243": [5, 9.5],
+      "343": [5, 10],
+      "043": [4.5, 10],
+      "143d": [1.5, 2.5],
+      "243d": [2, 2.5],
+      "043d": [1.5, 3],
+      "154": [6.5, 9.5],
+      "254": [7, 9.5],
+      "354": [7, 10],
+      "054": [6.5, 10],
+      "154d": [9.5, 2.5],
+      "254d": [10, 2.5],
+      "354d": [10, 3],
+      "165": [0.5, 7.5],
+      "265": [1, 7.5],
+      "365": [1, 8],
+      "065": [0.5, 8],
+      "165d": [10.5, 3.5],
+      "265d": [11, 3.5],
+      "365d": [11, 4],
+      "176": [1.5, 6.5],
+      "276": [2, 6.5],
+      "376": [2, 7],
+      "076": [1.5, 7],
+      "276d": [9, 1.5],
+      "376d": [9, 2],
+      "076d": [8.5, 2],
+      "107": [6.5, 8.5],
+      "207": [7, 8.5],
+      "307": [7, 9],
+      "007": [6.5, 9],
+      "207d": [11, 1.5],
+      "307d": [11, 2],
+      "007d": [10.5, 2],
+      "110": [4.5, 8.5],
+      "210": [5, 8.5],
+      "310": [5, 9],
+      "010": [4.5, 9],
+      "110d": [0.5, 1.5],
+      "310d": [1, 2],
+      "010d": [0.5, 2],
+      "121": [9.5, 6.5],
+      "221": [10, 6.5],
+      "321": [10, 7],
+      "021": [9.5, 7],
+      "121d": [2.5, 1.5],
+      "321d": [3, 2],
+      "021d": [2.5, 2],
+      "142": [1.5, 7.5],
+      "242": [2, 7.5],
+      "042": [1.5, 8],
+      "142d": [10.5, 0.5],
+      "242d": [11, 0.5],
+      "042d": [10.5, 1],
+      "153": [5.5, 6.5],
+      "253": [6, 6.5],
+      "353": [6, 7],
+      "053": [5.5, 7],
+      "153d": [5.5, 0.5],
+      "253d": [6, 0.5],
+      "164": [9.5, 7.5],
+      "264": [10, 7.5],
+      "364": [10, 8],
+      "164d": [0.5, 0.5],
+      "264d": [1, 0.5],
+      "364d": [1, 1],
+      "175": [4.5, 5.5],
+      "275": [5, 5.5],
+      "375": [5, 6],
+      "075": [4.5, 6],
+      "275d": [7, 1.5],
+      "375d": [7, 2],
+      "206": [4, 9.5],
+      "306": [4, 10],
+      "006": [3.5, 10],
+      "206d": [2, 3.5],
+      "306d": [2, 4],
+      "006d": [1.5, 4],
+      "117": [5.5, 2.5],
+      "217": [6, 2.5],
+      "317": [6, 4],
+      "017": [5.5, 4],
+      "317d": [6, 3],
+      "017d": [5.5, 3],
+      "120": [7.5, 9.5],
+      "320": [8, 10],
+      "020": [7.5, 10],
+      "120d": [9.5, 3.5],
+      "320d": [10, 4],
+      "020d": [9.5, 4],
+      "131": [6.5, 5.5],
+      "231": [7, 5.5],
+      "331": [7, 6],
+      "031": [6.5, 6],
+      "131d": [4.5, 1.5],
+      "031d": [4.5, 2],
+      "141": [7.5, 8.5],
+      "241": [8, 8.5],
+      "323": [4, 5],
+      "041": [7.5, 9],
+      "141d": [8.5, 3.5],
+      "041d": [8.5, 4],
+      "152": [8.5, 7.5],
+      "252": [9, 7.5],
+      "334": [2, 0],
+      "052": [8.5, 8],
+      "152d": [3.5, 0.5],
+      "252d": [4, 0.5],
+      "163": [2.5, 7.5],
+      "263": [3, 7.5],
+      "363": [3, 8],
+      "045": [9.5, 0],
+      "163d": [7.5, 0.5],
+      "263d": [8, 0.5],
+      "174": [3.5, 8.5],
+      "274": [4, 8.5],
+      "374": [4, 9],
+      "056": [7.5, 5],
+      "274d": [3, 3.5],
+      "374d": [3, 4],
+      "167": [7.5, 6.5],
+      "205": [10, 8.5],
+      "305": [10, 9],
+      "005": [9.5, 9],
+      "205d": [2, 0.5],
+      "305d": [2, 1],
+      "170": [6.5, 7.5],
+      "216": [9, 9.5],
+      "316": [9, 10],
+      "016": [8.5, 10],
+      "316d": [10, 5],
+      "016d": [9.5, 5],
+      "127": [2.5, 9.5],
+      "201": [5, 7.5],
+      "327": [3, 10],
+      "027": [2.5, 10],
+      "327d": [2, 5],
+      "027d": [1.5, 5],
+      "130": [1.5, 8.5],
+      "212": [4, 6.5],
+      "330": [2, 9],
+      "030": [1.5, 9],
+      "130d": [9.5, 0.5],
+      "030d": [9.5, 1],
+      "151": [10.5, 9.5],
+      "251": [11, 9.5],
+      "324": [0, 7],
+      "051": [10.5, 10],
+      "151d": [10.5, 4.5],
+      "324d": [0, 0],
+      "162": [8.5, 10.5],
+      "262": [9, 10.5],
+      "335": [6, 8],
+      "035": [5.5, 8],
+      "162d": [3.5, 2.5],
+      "262d": [8, 2.5],
+      "173": [0.5, 9.5],
+      "273": [1, 9.5],
+      "373": [1, 10],
+      "046": [11.5, 7],
+      "046d": [11.5, 0],
+      "273d": [1, 4.5],
+      "157": [11.5, 8.5],
+      "204": [0, 5.5],
+      "304": [0, 5],
+      "057": [11.5, 9],
+      "204d": [0, 4.5],
+      "304d": [0, 6],
+      "160": [11.5, 7.5],
+      "215": [8, 6.5],
+      "315": [8, 7],
+      "015": [7.5, 7],
+      "160d": [2.5, 4.5],
+      "315d": [9, 3],
+      "171": [5.5, 10.5],
+      "271": [6, 10.5],
+      "326": [6, 5],
+      "026": [5.5, 5],
+      "326d": [7, 5],
+      "026d": [4.5, 5],
+      "137": [3.5, 6.5],
+      "202": [0, 7.5],
+      "337": [4, 7],
+      "037": [3.5, 7],
+      "202d": [9, 4.5],
+      "037d": [2.5, 3],
+      "140": [11.5, 5.5],
+      "213": [0, 8.5],
+      "313": [0, 9],
+      "040": [11.5, 5],
+      "140d": [11.5, 4.5],
+      "040d": [11.5, 6],
+      "161": [9.5, 10.5],
+      "261": [10, 10.5],
+      "325": [9, 6],
+      "025": [8.5, 6],
+      "161d": [3.5, 1.5],
+      "325d": [4, 1],
+      "172": [1.5, 10.5],
+      "272": [2, 10.5],
+      "336": [3, 6],
+      "036": [2.5, 6],
+      "036d": [7.5, 1],
+      "272d": [8, 1.5],
+      "147": [4.5, 7.5],
+      "203": [4, 3.5],
+      "303": [4, 4],
+      "047": [4.5, 8],
+      "047d": [8.5, 5],
+      "203d": [8, 4.5],
+      "150": [7.5, 3.5],
+      "214": [7, 7.5],
+      "314": [7, 8],
+      "050": [7.5, 4],
+      "150d": [3.5, 4.5],
+      "314d": [3, 5],
+      "100": [5.5, 5.5],
+      "200": [6, 5.5],
+      "300": [6, 6],
+      "000": [5.5, 6],
+      "100d": [5.5, 8.5],
+      "200d": [6, 8.5],
+      "300d": [6, 10],
+      "000d": [5.5, 10]
+    };
     
-    // -------------------------
-    // Auto‑Tiling: Draw a wall tile at grid position (col, row)
-    // -------------------------
+    /****************************************************
+     * AUTO-TILING: DRAW WALL TILE
+     ****************************************************/
     function drawWallTile(ctx, col, row) {
       var tileCode = tileMap[row][col];
       var wt = wallTypes[tileCode];
       if (!wt) return;
       var solids = wt.wallSolids;
       
-      // Loop through quadrants (order: 0 = top‑right, 1 = bottom‑right, 2 = bottom‑left, 3 = top‑left)
       for (var q = 0; q < 4; q++) {
         var mask = (solids >> (q << 1)) & 3;
         if (mask === 0) continue;
         
-        // Determine the corner this quadrant touches.
         var cornerX = col + ((q & 2) === 0 ? 1 : 0);
         var cornerY = row + ((((q + 1) & 2) === 0 ? 0 : 1));
         
-        // Combine the solid info from the 8 surrounding spots.
         var aroundCorner =
           (wallSolidsAt(cornerX, cornerY) & 0xc0) |
           (wallSolidsAt(cornerX - 1, cornerY) & 0x03) |
@@ -327,7 +336,7 @@
           (wallSolidsAt(cornerX, cornerY - 1) & 0x30);
         aroundCorner = aroundCorner | (aroundCorner << 8);
         
-        var startDirection = q * 2 + 1; // start through the middle of this quadrant
+        var startDirection = q * 2 + 1;
         var cwSteps = 0;
         while (cwSteps < 8 && (aroundCorner & (1 << (startDirection + cwSteps)))) {
           cwSteps++;
@@ -351,12 +360,12 @@
         }
         var destX = col * TILE_SIZE;
         var destY = row * TILE_SIZE;
-        if (q === 0) { // top‑right quadrant
+        if (q === 0) {
           destX += QUAD_SIZE;
-        } else if (q === 1) { // bottom‑right quadrant
+        } else if (q === 1) {
           destX += QUAD_SIZE;
           destY += QUAD_SIZE;
-        } else if (q === 2) { // bottom‑left quadrant
+        } else if (q === 2) {
           destY += QUAD_SIZE;
         }
         var srcX = coords[0] * 40;
@@ -365,30 +374,30 @@
       }
     }
     
-    // -------------------------
-    // Draw the full map onto an off‑screen canvas.
-    // -------------------------
+    /****************************************************
+     * DRAW THE FULL MAP ONTO AN OFF-SCREEN CANVAS
+     ****************************************************/
     function drawMapOnCanvas(ctx) {
       for (var r = 0; r < tileMap.length; r++) {
         for (var c = 0; c < tileMap[r].length; c++) {
           var x = c * TILE_SIZE;
           var y = r * TILE_SIZE;
-          if (tileMap[r][c] === 1) {
-            // Draw floor tile from the tilesheet at (520,160).
-            ctx.drawImage(tileImage, 520, 160, TILE_SIZE, TILE_SIZE, x, y, TILE_SIZE, TILE_SIZE);
+          var tileType = tileMap[r][c];
+
+          if (tileType === 6) {
+            var tile = tiles[6];
+            ctx.drawImage(tileImage, tile.sx, tile.sy, TILE_SIZE, TILE_SIZE, x, y, TILE_SIZE, TILE_SIZE);
           } else {
-            // Draw wall tile using auto‑tiling.
             drawWallTile(ctx, c, r);
           }
         }
       }
     }
     
-    // Map dimensions (based on tileMap).
-    var MAP_ROWS = tileMap.length;          // 6
-    var MAP_COLS = tileMap[0].length;         // 7
-    var MAP_WIDTH = MAP_COLS * TILE_SIZE;       // 280
-    var MAP_HEIGHT = MAP_ROWS * TILE_SIZE;      // 240
+    var MAP_ROWS = tileMap.length;
+    var MAP_COLS = tileMap[0].length;
+    var MAP_WIDTH = MAP_COLS * TILE_SIZE;
+    var MAP_HEIGHT = MAP_ROWS * TILE_SIZE;
     
     /****************************************************
      * BOX2D & PIXI SETUP (Physics and Rendering)
@@ -396,12 +405,10 @@
     var PIXELS_PER_TPU = 100;  // 1 TPU = 100 pixels.
     var baseDT = 1 / 60;       // Base timestep (60 FPS)
     
-    // Physics parameters.
-    var ACCELERATION = 1.5; // TPU/s²
+    // For segregated movement:
     var MAX_SPEED = 2.5;    // TPU/s
-    var DRAG = 0.5;         // per second
+    var ACCELERATION = 0.025; // TPU per tick
     
-    // Box2D classes.
     var b2Vec2 = Box2D.Common.Math.b2Vec2,
         b2BodyDef = Box2D.Dynamics.b2BodyDef,
         b2Body = Box2D.Dynamics.b2Body,
@@ -409,20 +416,43 @@
         b2World = Box2D.Dynamics.b2World,
         b2CircleShape = Box2D.Collision.Shapes.b2CircleShape;
     
-    // Create a Box2D world with no gravity.
     var world = new b2World(new b2Vec2(0, 0), true);
     
     // Create the ball body at the center of the map.
     var bodyDef = new b2BodyDef();
     bodyDef.type = b2Body.b2_dynamicBody;
     bodyDef.position.Set(MAP_WIDTH / (2 * PIXELS_PER_TPU), MAP_HEIGHT / (2 * PIXELS_PER_TPU));
+    bodyDef.linearDamping = 0.5;
+    bodyDef.angularDamping = 0.5;
     var ballBody = world.CreateBody(bodyDef);
     var fixDef = new b2FixtureDef();
-    fixDef.shape = new b2CircleShape(19 / PIXELS_PER_TPU); // 38px diameter ball
-    fixDef.density = 1.0;
-    fixDef.friction = 0.3;
-    fixDef.restitution = 0.2;
+    fixDef.shape = new b2CircleShape(19 / PIXELS_PER_TPU);
+    fixDef.density = 1;
+    fixDef.friction = 0.5;
+    fixDef.restitution = 0.14;
     ballBody.CreateFixture(fixDef);
+    
+    // Create static wall bodies for tile code 1.
+    var b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape;
+    for (var row = 0; row < tileMap.length; row++) {
+      for (var col = 0; col < tileMap[row].length; col++) {
+        if (tileMap[row][col] === 1) {
+          var wallBodyDef = new b2BodyDef();
+          wallBodyDef.type = b2Body.b2_staticBody;
+          wallBodyDef.position.Set(
+            (col * TILE_SIZE + TILE_SIZE / 2) / PIXELS_PER_TPU,
+            (row * TILE_SIZE + TILE_SIZE / 2) / PIXELS_PER_TPU
+          );
+          var wallBody = world.CreateBody(wallBodyDef);
+          var wallFixDef = new b2FixtureDef();
+          wallFixDef.shape = new b2PolygonShape();
+          wallFixDef.shape.SetAsBox((TILE_SIZE / 2) / PIXELS_PER_TPU, (TILE_SIZE / 2) / PIXELS_PER_TPU);
+          wallFixDef.friction = 0;
+          wallFixDef.density = 0;
+          wallBody.CreateFixture(wallFixDef);
+        }
+      }
+    }
     
     // Create a PixiJS Application.
     var app = new PIXI.Application({
@@ -434,11 +464,11 @@
     });
     document.body.appendChild(app.view);
     
-    // Create a container for the world (map and ball) to simulate the camera.
+    // Create a container for the world.
     var worldContainer = new PIXI.Container();
     app.stage.addChild(worldContainer);
     
-    // Create an off‑screen canvas for the static map.
+    // Create an off-screen canvas for the map.
     var mapCanvas = document.createElement('canvas');
     mapCanvas.width = MAP_WIDTH;
     mapCanvas.height = MAP_HEIGHT;
@@ -449,12 +479,9 @@
     tileImage.crossOrigin = "anonymous";
     tileImage.src = "https://static.koalabeast.com/textures/classic/tiles.png";
     tileImage.onload = function() {
-      // Once the image is loaded, draw the map on the off‑screen canvas.
       drawMapOnCanvas(mapCtx);
-      // Create a PixiJS texture from the off‑screen canvas.
       var mapTexture = PIXI.Texture.from(mapCanvas);
       var mapSprite = new PIXI.Sprite(mapTexture);
-      // Add the map to the world container (behind other objects).
       worldContainer.addChildAt(mapSprite, 0);
     };
     
@@ -488,46 +515,40 @@
     });
     
     /****************************************************
-     * GAME LOOP
+     * GAME LOOP WITH UPDATED STEPPING
      ****************************************************/
     app.ticker.add(function(delta) {
-      var frameTime = baseDT * delta;
+      // Process input and update velocity BEFORE stepping.
+      var currentVel = ballBody.GetLinearVelocity();
+      var newVel = new b2Vec2(currentVel.x, currentVel.y);
+
+      if (keys["ArrowLeft"] || keys["a"] || keys["A"]) {
+        if (newVel.x > -MAX_SPEED) newVel.x -= ACCELERATION;
+      }
+      if (keys["ArrowRight"] || keys["d"] || keys["D"]) {
+        if (newVel.x < MAX_SPEED) newVel.x += ACCELERATION;
+      }
+      if (keys["ArrowUp"] || keys["w"] || keys["W"]) {
+        if (newVel.y > -MAX_SPEED) newVel.y -= ACCELERATION;
+      }
+      if (keys["ArrowDown"] || keys["s"] || keys["S"]) {
+        if (newVel.y < MAX_SPEED) newVel.y += ACCELERATION;
+      }
       
-      // Determine acceleration based on key input.
-      var ax = 0, ay = 0;
-      if (keys["ArrowLeft"] || keys["a"] || keys["A"]) { ax = -ACCELERATION; }
-      if (keys["ArrowRight"] || keys["d"] || keys["D"]) { ax = ACCELERATION; }
-      if (keys["ArrowUp"] || keys["w"] || keys["W"]) { ay = -ACCELERATION; }
-      if (keys["ArrowDown"] || keys["s"] || keys["S"]) { ay = ACCELERATION; }
-      
-      // Apply force to the ball body.
-      var velocity = ballBody.GetLinearVelocity();
-      var vx = velocity.x, vy = velocity.y;
-      var mass = ballBody.GetMass();
-      var forceX = mass * (ax - DRAG * vx);
-      var forceY = mass * (ay - DRAG * vy);
-      ballBody.ApplyForce(new b2Vec2(forceX, forceY), ballBody.GetWorldCenter());
-      
-      // Step the Box2D simulation.
-      world.Step(frameTime, 8, 3);
+      // Set the updated velocity and ensure the body is awake.
+      ballBody.SetLinearVelocity(newVel);
+      ballBody.SetAwake(true);
+
+      // Use a fixed timestep (baseDT) rather than a variable one.
+      world.Step(baseDT, 8, 3);
       world.ClearForces();
-      
-      // Clamp velocity.
-      velocity = ballBody.GetLinearVelocity();
-      vx = velocity.x;
-      vy = velocity.y;
-      if (vx > MAX_SPEED) vx = MAX_SPEED;
-      if (vx < -MAX_SPEED) vx = -MAX_SPEED;
-      if (vy > MAX_SPEED) vy = MAX_SPEED;
-      if (vy < -MAX_SPEED) vy = -MAX_SPEED;
-      ballBody.SetLinearVelocity(new b2Vec2(vx, vy));
-      
-      // Update the ball sprite position.
+
+      // Update the ball sprite's position.
       var pos = ballBody.GetPosition();
       ballSprite.x = pos.x * PIXELS_PER_TPU;
       ballSprite.y = pos.y * PIXELS_PER_TPU;
-      
-      // Camera follow: keep the ball centered.
+
+      // Camera follow (keeps ball centered).
       worldContainer.x = app.screen.width / 2 - ballSprite.x;
       worldContainer.y = app.screen.height / 2 - ballSprite.y;
     });
