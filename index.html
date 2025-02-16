@@ -562,7 +562,7 @@
           if (!dataB.canMove) return; // If ball B is dead, don't tag.
           // Ball A (flag carrier) dies.
           dataA.canMove = false;
-          var audio = new Audio("pop.mp3");
+          var audio = new Audio("https://static.koalabeast.com/sounds/pop.mp3");
           audio.play();
           createExplosionAt(bodyA.GetPosition(), bodyA);
           
