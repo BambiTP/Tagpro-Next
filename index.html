@@ -103,7 +103,7 @@
     
     // Load the spritesheet image.
     var tileImage = new Image();
-    tileImage.src = "tiles.png";
+    tileImage.src = "https://static.koalabeast.com/textures/classic/tiles.png";
     tileImage.onload = function() {
       // Draw a 50×50 grid of floor tiles.
       // Our floor tile is taken from the spritesheet at (40, 160) with size 40×40.
@@ -111,7 +111,7 @@
         for (var col = 0; col < MAP_COLS; col++) {
           mapCtx.drawImage(
             tileImage,       // source image
-            40, 160,         // source x, y (location of floor tile on spritesheet)
+            520, 160,         // source x, y (location of floor tile on spritesheet)
             TILE_SIZE, TILE_SIZE, // source width & height
             col * TILE_SIZE, // destination x
             row * TILE_SIZE, // destination y
@@ -133,7 +133,7 @@
     // The ball is located at (120, 0) on the spritesheet (40×40 in size).
     var ballTexture = new PIXI.Texture(
       PIXI.BaseTexture.from("tiles.png"),
-      new PIXI.Rectangle(120, 0, 40, 40)
+      new PIXI.Rectangle(560, 0, 40, 40)
     );
     var ballSprite = new PIXI.Sprite(ballTexture);
     ballSprite.anchor.set(0.5);
