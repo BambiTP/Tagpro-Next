@@ -7,13 +7,15 @@
     html, body {
       height: 100%;
       margin: 0;
+      /* Use background.jpg for the entire page */
+      background: url("background.jpg") no-repeat center center fixed;
+      background-size: cover;
     }
-    /* Center the game canvas on the page */
+    /* Center the canvas using Flexbox */
     body {
       display: flex;
       justify-content: center;
       align-items: center;
-      background: #202020;
     }
   </style>
 </head>
@@ -75,26 +77,17 @@
      * PIXI SETUP (Rendering)
      ****************************************************/
     // Create a PixiJS Application with a 1280×800 viewport.
+    // Set transparent: true so that the CSS background shows through.
     var app = new PIXI.Application({
       width: 1280,
       height: 800,
-      backgroundColor: 0x303030,
+      transparent: true,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
     });
     // Append the canvas to the body (it will be centered via CSS)
     document.body.appendChild(app.view);
     
-    // ---------------------------------------------------------------------
-    // Background: Areas not covered by the map will show background.png.
-    // This sprite stays fixed on stage.
-    var bgTexture = PIXI.Texture.from("background.jpg");
-    var backgroundSprite = new PIXI.Sprite(bgTexture);
-    backgroundSprite.width = app.screen.width;
-    backgroundSprite.height = app.screen.height;
-    app.stage.addChild(backgroundSprite);
-    
-    // ---------------------------------------------------------------------
     // Create a container for the world (map and ball) that we move to simulate the camera.
     var worldContainer = new PIXI.Container();
     app.stage.addChild(worldContainer);
