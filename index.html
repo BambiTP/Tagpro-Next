@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Static Tilemap Canvas with Box2dWeb & PixiJS</title>
+  <title>TagPro Physics: Centered Map with Background</title>
   <style>
     body {
       margin: 0;
@@ -22,7 +22,7 @@
      ****************************************************/
     // 1 TPU = 100 pixels.
     var PIXELS_PER_TPU = 100;
-    // Base time step (60 FPS).
+    // Base timestep (60 FPS)
     var baseDT = 1 / 60;
     
     // Physics parameters.
@@ -31,7 +31,7 @@
     var DRAG = 0.5;         // per second
     
     // Tile and Map dimensions.
-    var TILE_SIZE = 40;      // each tile is 40x40 pixels
+    var TILE_SIZE = 40;      // each tile is 40×40 pixels
     var MAP_COLS = 50;
     var MAP_ROWS = 50;
     var MAP_WIDTH = MAP_COLS * TILE_SIZE;   // 2000 pixels
@@ -50,7 +50,7 @@
         b2World = Box2D.Dynamics.b2World,
         b2CircleShape = Box2D.Collision.Shapes.b2CircleShape;
     
-    // Create a Box2D world with no gravity.
+    // Create a Box2D world with zero gravity.
     var world = new b2World(new b2Vec2(0, 0), true);
     
     // Create the ball body at the center of the map.
@@ -69,7 +69,7 @@
     /****************************************************
      * PIXI SETUP (Rendering)
      ****************************************************/
-    // Create a PixiJS Application with a 1280x800 viewport.
+    // Create a PixiJS Application with a 1280×800 viewport.
     var app = new PIXI.Application({
       width: 1280,
       height: 800,
@@ -79,14 +79,24 @@
     });
     document.body.appendChild(app.view);
     
-    // Create a container for the world; we'll move this to simulate a camera.
+    // ---------------------------------------------------------------------
+    // Background: everything not covered by the map will show background.png.
+    // This sprite remains fixed on stage.
+    var bgTexture = PIXI.Texture.from("background.png");
+    var backgroundSprite = new PIXI.Sprite(bgTexture);
+    backgroundSprite.width = app.screen.width;
+    backgroundSprite.height = app.screen.height;
+    app.stage.addChild(backgroundSprite);
+    
+    // ---------------------------------------------------------------------
+    // Create a container for the world (map and ball) that we move to simulate the camera.
     var worldContainer = new PIXI.Container();
     app.stage.addChild(worldContainer);
     
     /****************************************************
      * CREATE THE STATIC MAP USING AN OFF‑SCREEN CANVAS
      ****************************************************/
-    // Create an off‑screen canvas the size of the map.
+    // Create an off‑screen canvas sized to the map.
     var mapCanvas = document.createElement('canvas');
     mapCanvas.width = MAP_WIDTH;
     mapCanvas.height = MAP_HEIGHT;
@@ -102,7 +112,7 @@
         for (var col = 0; col < MAP_COLS; col++) {
           mapCtx.drawImage(
             tileImage,       // source image
-            40, 160,         // source x, y (tile's location in the spritesheet)
+            40, 160,         // source x, y (location of floor tile on spritesheet)
             TILE_SIZE, TILE_SIZE, // source width & height
             col * TILE_SIZE, // destination x
             row * TILE_SIZE, // destination y
@@ -113,19 +123,20 @@
       // Create a PIXI texture from the off‑screen canvas.
       var mapTexture = PIXI.Texture.from(mapCanvas);
       var mapSprite = new PIXI.Sprite(mapTexture);
-      worldContainer.addChildAt(mapSprite, 0); // Add behind other objects.
+      // The map sprite's top‑left is at (0,0) in the worldContainer.
+      worldContainer.addChildAt(mapSprite, 0); // add behind other objects
     };
     
     /****************************************************
      * SETUP THE BALL SPRITE
      ****************************************************/
-    // Create the ball sprite using the spritesheet.
-    // The ball is at (120, 0) on the spritesheet, 40x40 in size.
-    var ballFrame = new PIXI.Texture(
+    // Create the ball sprite from the spritesheet.
+    // The ball is at (120, 0) on the spritesheet (40×40 in size).
+    var ballTexture = new PIXI.Texture(
       PIXI.BaseTexture.from("tiles.png"),
       new PIXI.Rectangle(120, 0, 40, 40)
     );
-    var ballSprite = new PIXI.Sprite(ballFrame);
+    var ballSprite = new PIXI.Sprite(ballTexture);
     ballSprite.anchor.set(0.5);
     ballSprite.x = ballBody.GetPosition().x * PIXELS_PER_TPU;
     ballSprite.y = ballBody.GetPosition().y * PIXELS_PER_TPU;
@@ -189,7 +200,8 @@
       ballSprite.y = pos.y * PIXELS_PER_TPU;
       
       // --- Camera Follow ---
-      // Center the world container on the ball.
+      // Move the world container so the ball is centered.
+      // (Since the ball starts at the center of the map, the map is initially centered.)
       worldContainer.x = app.screen.width / 2 - ballSprite.x;
       worldContainer.y = app.screen.height / 2 - ballSprite.y;
     });
