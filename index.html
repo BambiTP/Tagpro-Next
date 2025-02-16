@@ -76,6 +76,9 @@
     /****************************************************
      * PIXI SETUP (Rendering)
      ****************************************************/
+    // Set crossOrigin default for PIXI BaseTextures
+    PIXI.BaseTexture.defaultOptions.crossOrigin = "anonymous";
+    
     // Create a PixiJS Application with a 1280×800 viewport.
     // Set transparent: true so that the CSS background shows through.
     var app = new PIXI.Application({
@@ -103,18 +106,19 @@
     
     // Load the spritesheet image.
     var tileImage = new Image();
+    tileImage.crossOrigin = "anonymous"; // Enable CORS for this image
     tileImage.src = "https://static.koalabeast.com/textures/classic/tiles.png";
     tileImage.onload = function() {
       // Draw a 50×50 grid of floor tiles.
       for (var row = 0; row < MAP_ROWS; row++) {
         for (var col = 0; col < MAP_COLS; col++) {
           mapCtx.drawImage(
-            tileImage,       // source image
-            520, 160,         // source x, y (location of floor tile on spritesheet)
-            TILE_SIZE, TILE_SIZE, // source width & height
-            col * TILE_SIZE, // destination x
-            row * TILE_SIZE, // destination y
-            TILE_SIZE, TILE_SIZE  // destination width & height
+            tileImage,             // source image
+            520, 160,              // source x, y (location of floor tile on spritesheet)
+            TILE_SIZE, TILE_SIZE,  // source width & height
+            col * TILE_SIZE,       // destination x
+            row * TILE_SIZE,       // destination y
+            TILE_SIZE, TILE_SIZE   // destination width & height
           );
         }
       }
@@ -130,8 +134,11 @@
      ****************************************************/
     // Create the ball sprite from the spritesheet.
     // The ball is located at (120, 0) on the spritesheet (40×40 in size).
+    var baseTexture = PIXI.BaseTexture.from("https://static.koalabeast.com/textures/classic/tiles.png", {
+      crossOrigin: "anonymous"
+    });
     var ballTexture = new PIXI.Texture(
-      PIXI.BaseTexture.from("https://static.koalabeast.com/textures/classic/tiles.png"),
+      baseTexture,
       new PIXI.Rectangle(560, 0, 40, 40)
     );
     var ballSprite = new PIXI.Sprite(ballTexture);
