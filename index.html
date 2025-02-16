@@ -76,7 +76,7 @@
     }
     
     // Predefined quadrant coordinates (DO NOT EDIT)
-  var quadrantCoords = {
+    var quadrantCoords = {
       "132": [10.5, 7.5],
       "232": [11, 7.5],
       "332": [11, 8],
@@ -466,7 +466,7 @@
     fixDef.restitution = 0.2;
     controlledBall.CreateFixture(fixDef);
     // Store starting position and flag property.
-    controlledBall.SetUserData({ id: 1, controlled: true, hasFlag: false, startPos: controlledStart });
+    controlledBall.SetUserData({ id: 1, controlled: true, hasFlag: false, startPos: controlledStart, canMove: true });
     
     // Create the non-controlled ball.
     var ncBodyDef = new b2BodyDef();
@@ -482,7 +482,7 @@
     ncFixDef.friction = 0.5;
     ncFixDef.restitution = 0.2;
     nonControlledBall.CreateFixture(ncFixDef);
-    nonControlledBall.SetUserData({ id: 2, controlled: false, hasFlag: false, startPos: nonControlledStart });
+    nonControlledBall.SetUserData({ id: 2, controlled: false, hasFlag: false, startPos: nonControlledStart, canMove: true });
     
     // Create static wall bodies for tile code 1.
     var b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape;
@@ -505,7 +505,41 @@
     }
     
     /****************************************************
-     * BOX2D CONTACT LISTENER (Spin Adjustment & Flag Tag)
+     * EXPLOSION FUNCTION
+     * When a ball dies, we create an explosion at its position.
+     * All other balls within blastRadius (1.6 TPU) get a speed boost:
+     *   speedboost = strength * (blastRadius - distance)
+     * with strength = 0.25.
+     ****************************************************/
+    function createExplosionAt(position, dyingBody) {
+      var blastRadius = 0.4 * 5; // 1.6 TPU
+      var strength = 2;
+      var body = world.GetBodyList();
+      while (body) {
+        var data = body.GetUserData();
+        // Apply explosion to bodies that have an id and are not the dying body.
+        if (data && data.id && body !== dyingBody) {
+          var pos = body.GetPosition();
+          var dx = pos.x - position.x;
+          var dy = pos.y - position.y;
+          var distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance < blastRadius) {
+            var boostMagnitude = strength * (blastRadius - distance);
+            if (distance > 0) {
+              var unitX = dx / distance;
+              var unitY = dy / distance;
+              var currentVel = body.GetLinearVelocity();
+              body.SetLinearVelocity(new b2Vec2(currentVel.x + unitX * boostMagnitude, currentVel.y + unitY * boostMagnitude));
+            }
+          }
+        }
+        body = body.GetNext();
+      }
+    }
+    
+    /****************************************************
+     * BOX2D CONTACT LISTENER (Spin Adjustment, Flag Tag,
+     * Sound, Explosion, and Freeze on Death)
      ****************************************************/
     var listener = new Box2D.Dynamics.b2ContactListener();
     listener.BeginContact = function(contact) {
@@ -517,14 +551,21 @@
       var dataA = bodyA.GetUserData();
       var dataB = bodyB.GetUserData();
       
-      // --- FLAG TAG LOGIC ---
-      // If both bodies represent players (i.e. have a hasFlag property)
+      // --- FLAG TAG LOGIC & DEATH EFFECTS ---
+      // Only allow tagging if both balls are "alive" (i.e. can move)
       if (dataA && dataB && dataA.hasFlag !== undefined && dataB.hasFlag !== undefined) {
         // If one has the flag and the other does not, then the flag-holder "dies"
         // and its collisions are disabled (by setting its fixtures as sensors) and moved
-        // to spawn. After 5 seconds it respawns (collisions re-enabled) and the other ball gets the flag.
+        // to spawn. Also, play a pop sound and create an explosion.
+        // But if the ball trying to tag is dead (canMove === false) then do nothing.
         if (dataA.hasFlag && !dataB.hasFlag) {
-          // Disable collisions for ball A and "kill" it.
+          if (!dataB.canMove) return; // If ball B is dead, don't tag.
+          // Ball A (flag carrier) dies.
+          dataA.canMove = false;
+          var audio = new Audio("pop.mp3");
+          audio.play();
+          createExplosionAt(bodyA.GetPosition(), bodyA);
+          
           disableCollisions(bodyA);
           if (dataA.sprite) { dataA.sprite.visible = false; }
           dataA.hasFlag = false;
@@ -538,9 +579,16 @@
               if (dataA.sprite) { dataA.sprite.visible = true; }
               enableCollisions(bodyA);
               dataA.isRespawning = false;
-            }, 5000);
+              dataA.canMove = true;
+            }, 3000);
           }
         } else if (dataB.hasFlag && !dataA.hasFlag) {
+          if (!dataA.canMove) return; // If ball A is dead, don't tag.
+          dataB.canMove = false;
+          var audio = new Audio("pop.mp3");
+          audio.play();
+          createExplosionAt(bodyB.GetPosition(), bodyB);
+          
           disableCollisions(bodyB);
           if (dataB.sprite) { dataB.sprite.visible = false; }
           dataB.hasFlag = false;
@@ -554,6 +602,7 @@
               if (dataB.sprite) { dataB.sprite.visible = true; }
               enableCollisions(bodyB);
               dataB.isRespawning = false;
+              dataB.canMove = true;
             }, 5000);
           }
         }
@@ -608,6 +657,10 @@
     mapCanvas.height = MAP_HEIGHT;
     var mapCtx = mapCanvas.getContext('2d');
     
+    // Global declarations for flag sprites.
+    var flagSprite;
+    var miniFlagSprite; // This will be the shrunken flag following the flag holder.
+    
     // Load the tilesheet image.
     var tileImage = new Image();
     tileImage.crossOrigin = "anonymous";
@@ -626,10 +679,15 @@
       flagSprite.x = flag.x;
       flagSprite.y = flag.y;
       worldContainer.addChild(flagSprite);
+      
+      // Create mini flag sprite (a shrunken version) that will follow the flag holder.
+      var miniFlagTexture = new PIXI.Texture(baseTextureForFlag, new PIXI.Rectangle(520, 40, 40, 40));
+      miniFlagSprite = new PIXI.Sprite(miniFlagTexture);
+      miniFlagSprite.anchor.set(0.5);
+      miniFlagSprite.scale.set(0.5); // Adjust scale as needed.
+      miniFlagSprite.visible = false;
+      worldContainer.addChild(miniFlagSprite);
     };
-    
-    // Declare flagSprite so it's accessible in the ticker.
-    var flagSprite;
     
     // Create ball textures.
     var baseTexture = PIXI.BaseTexture.from("https://static.koalabeast.com/textures/classic/tiles.png");
@@ -675,30 +733,36 @@
      * GAME LOOP: STEP PHYSICS, UPDATE SPRITES, FLAG PICKUP
      ****************************************************/
     app.ticker.add(function(delta) {
-      // Process input for the controlled ball.
-      var currentVel = controlledBall.GetLinearVelocity();
-      var newVel = new b2Vec2(currentVel.x, currentVel.y);
-
-      if (keys["ArrowLeft"] || keys["a"] || keys["A"]) {
-        if (newVel.x > -MAX_SPEED) newVel.x -= ACCELERATION;
+      // --- Process input for the controlled ball only if it can move ---
+      var controlledData = controlledBall.GetUserData();
+      if (controlledData.canMove !== false) {
+        var currentVel = controlledBall.GetLinearVelocity();
+        var newVel = new b2Vec2(currentVel.x, currentVel.y);
+    
+        if (keys["ArrowLeft"] || keys["a"] || keys["A"]) {
+          if (newVel.x > -MAX_SPEED) newVel.x -= ACCELERATION;
+        }
+        if (keys["ArrowRight"] || keys["d"] || keys["D"]) {
+          if (newVel.x < MAX_SPEED) newVel.x += ACCELERATION;
+        }
+        if (keys["ArrowUp"] || keys["w"] || keys["W"]) {
+          if (newVel.y > -MAX_SPEED) newVel.y -= ACCELERATION;
+        }
+        if (keys["ArrowDown"] || keys["s"] || keys["S"]) {
+          if (newVel.y < MAX_SPEED) newVel.y += ACCELERATION;
+        }
+        
+        controlledBall.SetLinearVelocity(newVel);
+        controlledBall.SetAwake(true);
+      } else {
+        // If the ball cannot move (e.g. after dying), ensure its velocity stays zero.
+        controlledBall.SetLinearVelocity(new b2Vec2(0,0));
       }
-      if (keys["ArrowRight"] || keys["d"] || keys["D"]) {
-        if (newVel.x < MAX_SPEED) newVel.x += ACCELERATION;
-      }
-      if (keys["ArrowUp"] || keys["w"] || keys["W"]) {
-        if (newVel.y > -MAX_SPEED) newVel.y -= ACCELERATION;
-      }
-      if (keys["ArrowDown"] || keys["s"] || keys["S"]) {
-        if (newVel.y < MAX_SPEED) newVel.y += ACCELERATION;
-      }
-      
-      controlledBall.SetLinearVelocity(newVel);
-      controlledBall.SetAwake(true);
-
+    
       // Step physics.
       world.Step(baseDT, 8, 3);
       world.ClearForces();
-
+    
       // Update sprites based on body positions.
       var pos = controlledBall.GetPosition();
       ballSprite.x = pos.x * PIXELS_PER_TPU;
@@ -716,16 +780,15 @@
       
       /****************************************************
        * FLAG PICKUP LOGIC:
-       * Instead of using the ball’s center only, we check if the
-       * distance between the ball’s center and the flag’s center is less
-       * than (FLAG_PICKUP_RADIUS + BALL_PIXEL_RADIUS). When the flag is
-       * initially picked up, update the flag sprite texture.
+       * Check if the distance between a ball’s center and the flag’s
+       * center is less than (FLAG_PICKUP_RADIUS + BALL_PIXEL_RADIUS).
+       * When the flag is picked up, update the flag sprite texture.
        ****************************************************/
       if (!flag.taken && flagSprite) {
         var flagCenterX = flag.x;
         var flagCenterY = flag.y;
         var pickupDistance = FLAG_PICKUP_RADIUS + BALL_PIXEL_RADIUS; // 15 + 19 = 34px
-
+    
         // Check controlled ball.
         var controlledPos = controlledBall.GetPosition();
         var controlledX = controlledPos.x * PIXELS_PER_TPU;
@@ -760,6 +823,23 @@
             console.log("Non-controlled ball picked up the flag!");
           }
         }
+      }
+      
+      /****************************************************
+       * MINI FLAG SPRITE LOGIC:
+       * If a ball holds the flag, hide the full-sized flag sprite
+       * and position the shrunken mini flag above the ball.
+       ****************************************************/
+      if (controlledBall.GetUserData().hasFlag) {
+         miniFlagSprite.visible = true;
+         miniFlagSprite.x = ballSprite.x;
+         miniFlagSprite.y = ballSprite.y - ballSprite.height/2 - 10;
+      } else if (nonControlledBall.GetUserData().hasFlag) {
+         miniFlagSprite.visible = true;
+         miniFlagSprite.x = ncBallSprite.x;
+         miniFlagSprite.y = ncBallSprite.y - ncBallSprite.height/2 - 10;
+      } else {
+         miniFlagSprite.visible = false;
       }
     });
   </script>
