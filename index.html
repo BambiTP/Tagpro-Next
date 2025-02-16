@@ -611,32 +611,34 @@
       
       // --- SPIN ADJUSTMENT LOGIC ---
       if ((dataA && dataA.controlled) || (dataB && dataB.controlled)) {
-        var controlledBody = dataA && dataA.controlled ? bodyA : bodyB;
-        var worldManifold = new Box2D.Collision.b2WorldManifold();
-        contact.GetWorldManifold(worldManifold);
-        var normal = worldManifold.m_normal;
-        var tangent = new b2Vec2(-normal.y, normal.x);
-        var velocity = controlledBody.GetLinearVelocity();
-        var dot = velocity.x * tangent.x + velocity.y * tangent.y;
-        var sign = (dot >= 0) ? 1 : -1;
-        var speed = velocity.Length();
-        var ballRadius = 19 / PIXELS_PER_TPU;
-        var expectedAngularVel = sign * (speed / ballRadius);
-        var currentAngularVel = controlledBody.GetAngularVelocity();
-        var adjustmentFactor = 0.11;
-        var newAngularVel = currentAngularVel + adjustmentFactor * (expectedAngularVel - currentAngularVel);
-        controlledBody.SetAngularVelocity(newAngularVel);
-      }
-    };
-    world.SetContactListener(listener);
-    
-    // Log angular velocity for debugging.
-    setInterval(function() {
-      if (controlledBall) {
-        console.log("Controlled Ball Angular Velocity:", controlledBall.GetAngularVelocity());
-      }
-    }, 1000);
-    
+    var controlledBody = dataA && dataA.controlled ? bodyA : bodyB;
+    var worldManifold = new Box2D.Collision.b2WorldManifold();
+    contact.GetWorldManifold(worldManifold);
+
+    var normal = worldManifold.m_normal;
+    var tangent = new b2Vec2(-normal.y, normal.x);
+    var velocity = controlledBody.GetLinearVelocity();
+    var dot = velocity.x * tangent.x + velocity.y * tangent.y;
+    var sign = (dot >= 0) ? 1 : -1;
+    var speed = velocity.Length();
+    var ballRadius = 19 / PIXELS_PER_TPU;
+
+    // Compute the expected angular velocity
+    var expectedAngularVel = sign * (speed / ballRadius);
+    var currentAngularVel = controlledBody.GetAngularVelocity();
+
+    // Compute the moment of inertia for a solid disk
+    var mass = controlledBody.GetMass();
+    var inertia = 0.5 * mass * ballRadius * ballRadius;
+
+    // Define a tuning factor for torque application
+    var k = 0.3;  // Adjust for responsiveness
+    var torque = k * inertia * (expectedAngularVel - currentAngularVel);
+
+    // Apply torque instead of directly setting angular velocity
+    controlledBody.ApplyTorque(torque);
+}
+﻿
     /****************************************************
      * PIXI SETUP & MAP / SPRITE CREATION
      ****************************************************/
