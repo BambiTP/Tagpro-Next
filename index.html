@@ -25,6 +25,9 @@
   <script src="Box2d.min.js"></script>
   
   <script>
+    // Set the global crossOrigin setting for PixiJS.
+    PIXI.settings.CROSS_ORIGIN = "anonymous";
+
     /****************************************************
      * CONSTANTS & SETUP
      ****************************************************/
@@ -76,9 +79,6 @@
     /****************************************************
      * PIXI SETUP (Rendering)
      ****************************************************/
-    // Set crossOrigin default for PIXI BaseTextures
-    PIXI.BaseTexture.defaultOptions.crossOrigin = "anonymous";
-    
     // Create a PixiJS Application with a 1280×800 viewport.
     // Set transparent: true so that the CSS background shows through.
     var app = new PIXI.Application({
@@ -134,9 +134,7 @@
      ****************************************************/
     // Create the ball sprite from the spritesheet.
     // The ball is located at (120, 0) on the spritesheet (40×40 in size).
-    var baseTexture = PIXI.BaseTexture.from("https://static.koalabeast.com/textures/classic/tiles.png", {
-      crossOrigin: "anonymous"
-    });
+    var baseTexture = PIXI.BaseTexture.from("https://static.koalabeast.com/textures/classic/tiles.png");
     var ballTexture = new PIXI.Texture(
       baseTexture,
       new PIXI.Rectangle(560, 0, 40, 40)
