@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>TagPro Physics with Box2dWeb & PixiJS - Camera Follow</title>
+  <title>Static Tilemap with Box2dWeb & PixiJS - Camera Follow</title>
   <style>
     body {
       margin: 0;
@@ -26,30 +26,23 @@
     var baseDT = 1 / 60;
     
     // TagPro physics parameters (in TPU units):
-    // When a key is held, acceleration = 1.5 TPU/s² per axis.
-    // Drag acts as a deceleration proportional to velocity: 0.5 × currentSpeed.
-    // Maximum speed per axis: 2.5 TPU/s.
     var ACCELERATION = 1.5; // TPU/s²
     var MAX_SPEED = 2.5;    // TPU/s
     var DRAG = 0.5;         // per second
     
-    // Tile dimensions (in pixels)
-    var TILE_SIZE = 40;
-    // Map dimensions in tiles:
-    var MAP_TILES_X = 50;
-    var MAP_TILES_Y = 50;
-    // Map dimensions in pixels:
-    var MAP_WIDTH = MAP_TILES_X * TILE_SIZE;   // 2000 pixels
-    var MAP_HEIGHT = MAP_TILES_Y * TILE_SIZE;    // 2000 pixels
+    // Tile and Map dimensions.
+    var TILE_SIZE = 40;      // each tile is 40x40 pixels
+    var MAP_COLS = 50;
+    var MAP_ROWS = 50;
+    var MAP_WIDTH = MAP_COLS * TILE_SIZE;   // 2000 pixels
+    var MAP_HEIGHT = MAP_ROWS * TILE_SIZE;    // 2000 pixels
     
-    // Ball dimensions: 38 px diameter (radius = 19 px).
-    // Convert radius to TPU units.
+    // Ball dimensions: 38px diameter (radius = 19px).
     var ballRadiusTPU = 19 / PIXELS_PER_TPU;
     
     /****************************************************
      * BOX2D SETUP (Box2dWeb)
      ****************************************************/
-    // Aliases for Box2dWeb classes.
     var b2Vec2 = Box2D.Common.Math.b2Vec2,
         b2BodyDef = Box2D.Dynamics.b2BodyDef,
         b2Body = Box2D.Dynamics.b2Body,
@@ -57,13 +50,12 @@
         b2World = Box2D.Dynamics.b2World,
         b2CircleShape = Box2D.Collision.Shapes.b2CircleShape;
     
-    // Create a Box2D world with zero gravity (top-down view).
+    // Create a Box2D world with zero gravity.
     var world = new b2World(new b2Vec2(0, 0), true);
     
-    // Create the ball body.
+    // Create the ball body at the center of the map.
     var bodyDef = new b2BodyDef();
     bodyDef.type = b2Body.b2_dynamicBody;
-    // Start at the center of the 50×50 tile map.
     bodyDef.position.Set(MAP_WIDTH/(2*PIXELS_PER_TPU), MAP_HEIGHT/(2*PIXELS_PER_TPU));
     var ballBody = world.CreateBody(bodyDef);
     
@@ -78,7 +70,7 @@
     /****************************************************
      * PIXI SETUP (Rendering)
      ****************************************************/
-    // Create a PixiJS Application with a 1280x800 canvas.
+    // Create a PixiJS Application with a 1280x800 viewport.
     var app = new PIXI.Application({
       width: 1280,
       height: 800,
@@ -93,28 +85,60 @@
     app.stage.addChild(worldContainer);
     
     // ---------------------------
-    // TEXTURE SETUP
+    // SPRITESHEET & FLOOR TILE TEXTURE
     // ---------------------------
-    // Create a base texture from the tilesheet.
+    // Load the base texture from your tilesheet.
     var baseTexture = PIXI.BaseTexture.from("tiles.png");
-    
-    // Create a texture for the ball.
-    // Ball: 3 to the right on the first row -> (3 * 40, 0 * 40) = (120, 0)
-    var ballTexture = new PIXI.Texture(baseTexture, new PIXI.Rectangle(120, 0, 40, 40));
-    
-    // Create a texture for the floor tile.
-    // Floor: 2 to the right on the 5th row -> (2 * 40, 4 * 40) = (80, 160)
+    // Floor tile: defined as 2 tiles to the right on the 5th row
+    // (i.e. at x=40, y=160, with width and height of 40).
     var floorTexture = new PIXI.Texture(baseTexture, new PIXI.Rectangle(40, 160, 40, 40));
     
-    // Create a TilingSprite for the floor to cover the entire 50×50 tile map.
-    var floorSprite = new PIXI.TilingSprite(floorTexture, MAP_WIDTH, MAP_HEIGHT);
-    worldContainer.addChild(floorSprite);
+    /****************************************************
+     * BUILD THE STATIC MAP FROM A 2D ARRAY
+     ****************************************************/
+    // Create a 2D array for the map.
+    // For now, a value of 1 means a floor tile.
+    var mapArray = [];
+    for (var row = 0; row < MAP_ROWS; row++) {
+      var rowArray = [];
+      for (var col = 0; col < MAP_COLS; col++) {
+        rowArray.push(1);
+      }
+      mapArray.push(rowArray);
+    }
     
-    // Create a Sprite for the ball.
+    // Create a temporary container to hold the tile sprites.
+    var tileContainer = new PIXI.Container();
+    for (var row = 0; row < MAP_ROWS; row++) {
+      for (var col = 0; col < MAP_COLS; col++) {
+        // For a floor tile (value 1), add the floor tile sprite.
+        if (mapArray[row][col] === 1) {
+          var tileSprite = new PIXI.Sprite(floorTexture);
+          tileSprite.x = col * TILE_SIZE;
+          tileSprite.y = row * TILE_SIZE;
+          tileContainer.addChild(tileSprite);
+        }
+      }
+    }
+    
+    // Render the tileContainer to a RenderTexture so it becomes a static image.
+    var mapRenderTexture = PIXI.RenderTexture.create({
+      width: MAP_WIDTH,
+      height: MAP_HEIGHT
+    });
+    app.renderer.render(tileContainer, mapRenderTexture);
+    
+    // Create a sprite from the RenderTexture and add it to the world.
+    var mapSprite = new PIXI.Sprite(mapRenderTexture);
+    worldContainer.addChildAt(mapSprite, 0);  // add behind other objects
+    
+    /****************************************************
+     * SETUP THE BALL SPRITE
+     ****************************************************/
+    // Create the ball sprite from the spritesheet.
+    var ballTexture = new PIXI.Texture(baseTexture, new PIXI.Rectangle(120, 0, 40, 40));
     var ballSprite = new PIXI.Sprite(ballTexture);
-    // Set the anchor to the center so that its position is centered.
     ballSprite.anchor.set(0.5);
-    // Set its initial position.
     ballSprite.x = ballBody.GetPosition().x * PIXELS_PER_TPU;
     ballSprite.y = ballBody.GetPosition().y * PIXELS_PER_TPU;
     worldContainer.addChild(ballSprite);
@@ -122,7 +146,6 @@
     /****************************************************
      * INPUT HANDLING
      ****************************************************/
-    // Global keys object.
     var keys = {};
     window.addEventListener("keydown", function(e) {
       // Prevent default arrow key actions.
@@ -144,34 +167,25 @@
     app.ticker.add(function(delta) {
       var frameTime = baseDT * delta;
       
-      // Determine acceleration based on keys:
+      // Determine acceleration based on input keys.
       var ax = 0, ay = 0;
-      if (keys["ArrowLeft"] || keys["a"] || keys["A"]) {
-        ax = -ACCELERATION;
-      }
-      if (keys["ArrowRight"] || keys["d"] || keys["D"]) {
-        ax = ACCELERATION;
-      }
-      if (keys["ArrowUp"] || keys["w"] || keys["W"]) {
-        ay = -ACCELERATION;
-      }
-      if (keys["ArrowDown"] || keys["s"] || keys["S"]) {
-        ay = ACCELERATION;
-      }
+      if (keys["ArrowLeft"] || keys["a"] || keys["A"]) { ax = -ACCELERATION; }
+      if (keys["ArrowRight"] || keys["d"] || keys["D"]) { ax = ACCELERATION; }
+      if (keys["ArrowUp"] || keys["w"] || keys["W"]) { ay = -ACCELERATION; }
+      if (keys["ArrowDown"] || keys["s"] || keys["S"]) { ay = ACCELERATION; }
       
       // Get current velocity.
       var velocity = ballBody.GetLinearVelocity();
       var vx = velocity.x;
       var vy = velocity.y;
       
-      // Compute net force: F = mass * (acceleration - DRAG * velocity)
+      // Compute force: F = mass * (acceleration - DRAG * velocity).
       var mass = ballBody.GetMass();
       var forceX = mass * (ax - DRAG * vx);
       var forceY = mass * (ay - DRAG * vy);
-      
       ballBody.ApplyForce(new b2Vec2(forceX, forceY), ballBody.GetWorldCenter());
       
-      // Step the simulation.
+      // Step the Box2D simulation.
       world.Step(frameTime, 8, 3);
       world.ClearForces();
       
@@ -185,20 +199,15 @@
       if (vy < -MAX_SPEED) vy = -MAX_SPEED;
       ballBody.SetLinearVelocity(new b2Vec2(vx, vy));
       
-      // Update the ball's world position.
+      // Update the ball's sprite position.
       var pos = ballBody.GetPosition();
       ballSprite.x = pos.x * PIXELS_PER_TPU;
       ballSprite.y = pos.y * PIXELS_PER_TPU;
       
       // --- Camera Follow ---
-      // Center the world container so that the ball is in the middle of the screen.
+      // Center the world container on the ball.
       worldContainer.x = app.screen.width / 2 - ballSprite.x;
       worldContainer.y = app.screen.height / 2 - ballSprite.y;
-      
-      // Optionally, clamp the camera so it doesn’t show areas outside the map.
-      // Example clamping (uncomment if desired):
-      // worldContainer.x = Math.min(0, Math.max(worldContainer.x, app.screen.width - MAP_WIDTH));
-      // worldContainer.y = Math.min(0, Math.max(worldContainer.y, app.screen.height - MAP_HEIGHT));
     });
   </script>
 </body>
