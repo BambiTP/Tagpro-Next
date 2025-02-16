@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>TagPro with Auto-Tiled Map and Physics</title>
+  <title>TagPro with Auto-Tiled Map and Collision-Based Spin</title>
   <style>
     html, body {
       height: 100%;
@@ -30,8 +30,7 @@
     const QUAD_SIZE = TILE_SIZE / 2; // Each quadrant is 20×20 pixels.
 
     // In our tile map:
-    //   1-5 = wall tiles
-    //   6   = floor tile
+    //   1 = wall tiles, 6 = floor tile
     var tileMap = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
@@ -421,14 +420,18 @@
     // Create the ball body at the center of the map.
     var bodyDef = new b2BodyDef();
     bodyDef.type = b2Body.b2_dynamicBody;
+    // Enable continuous collision detection to help prevent tunneling.
+    bodyDef.bullet = true;
     bodyDef.position.Set(MAP_WIDTH / (2 * PIXELS_PER_TPU), MAP_HEIGHT / (2 * PIXELS_PER_TPU));
+    // Use some linear damping and zero angular damping – we'll control spin via collision.
     bodyDef.linearDamping = 0.5;
     bodyDef.angularDamping = 0.5;
     var ballBody = world.CreateBody(bodyDef);
     var fixDef = new b2FixtureDef();
-    fixDef.shape = new b2CircleShape(19 / PIXELS_PER_TPU);
+    // Increase the ball’s collision radius from 19px to 20px so it exactly matches the tile half-size.
+    fixDef.shape = new b2CircleShape(20 / PIXELS_PER_TPU);
     fixDef.density = 1;
-    fixDef.friction = 0.5;
+    fixDef.friction = 0.5; // Ball friction for rotational torque generation.
     fixDef.restitution = 0.2;
     ballBody.CreateFixture(fixDef);
     
@@ -447,12 +450,57 @@
           var wallFixDef = new b2FixtureDef();
           wallFixDef.shape = new b2PolygonShape();
           wallFixDef.shape.SetAsBox((TILE_SIZE / 2) / PIXELS_PER_TPU, (TILE_SIZE / 2) / PIXELS_PER_TPU);
-          wallFixDef.friction = 0;
-          wallFixDef.density = 0;
+          // Walls now have default friction.
           wallBody.CreateFixture(wallFixDef);
         }
       }
     }
+    
+    // Use the contact listener to adjust the spin based on collision.
+    var listener = new Box2D.Dynamics.b2ContactListener();
+    listener.BeginContact = function(contact) {
+  var fixtureA = contact.GetFixtureA();
+  var fixtureB = contact.GetFixtureB();
+  
+  // Check if the ball is involved.
+  if (fixtureA.GetBody() !== ballBody && fixtureB.GetBody() !== ballBody) return;
+
+  // Get the world manifold to access the contact normal.
+  var worldManifold = new Box2D.Collision.b2WorldManifold();
+  contact.GetWorldManifold(worldManifold);
+  var normal = worldManifold.m_normal; // Normal points from fixtureA to fixtureB.
+
+  // Calculate the tangent vector (perpendicular to the normal).
+  var tangent = new b2Vec2(-normal.y, normal.x);
+
+  // Get the ball's velocity.
+  var velocity = ballBody.GetLinearVelocity();
+
+  // Dot product of velocity and tangent to determine rotation direction.
+  var dot = velocity.x * tangent.x + velocity.y * tangent.y;
+  var sign = (dot >= 0) ? 1 : -1;
+
+  var speed = velocity.Length();
+  // Use the actual ball radius (19px) here.
+  var ballRadius = 19 / PIXELS_PER_TPU;
+  
+  // Multiply by the sign to get the correct direction.
+  var expectedAngularVel = sign * (speed / ballRadius);
+  
+  var currentAngularVel = ballBody.GetAngularVelocity();
+  var adjustmentFactor = 0.11;
+  var newAngularVel = currentAngularVel + adjustmentFactor * (expectedAngularVel - currentAngularVel);
+  ballBody.SetAngularVelocity(newAngularVel);
+};
+
+    world.SetContactListener(listener);
+    
+    // Log angular velocity for debugging.
+    setInterval(function() {
+      if (ballBody) {
+        console.log("Physics Angular Velocity:", ballBody.GetAngularVelocity());
+      }
+    }, 1000);
     
     // Create a PixiJS Application.
     var app = new PIXI.Application({
@@ -515,7 +563,7 @@
     });
     
     /****************************************************
-     * GAME LOOP WITH UPDATED STEPPING
+     * GAME LOOP WITH UPDATED STEPPING & SPRITE ROTATION
      ****************************************************/
     app.ticker.add(function(delta) {
       // Process input and update velocity BEFORE stepping.
@@ -539,15 +587,17 @@
       ballBody.SetLinearVelocity(newVel);
       ballBody.SetAwake(true);
 
-      // Use a fixed timestep (baseDT) rather than a variable one.
+      // Step the physics simulation.
       world.Step(baseDT, 8, 3);
       world.ClearForces();
 
-      // Update the ball sprite's position.
+      // Update the ball sprite's position and rotation based on the physics body.
       var pos = ballBody.GetPosition();
       ballSprite.x = pos.x * PIXELS_PER_TPU;
       ballSprite.y = pos.y * PIXELS_PER_TPU;
-
+      // Use the physics body's integrated angle (which is updated by our collision adjustments).
+      ballSprite.rotation = ballBody.GetAngle();
+      
       // Camera follow (keeps ball centered).
       worldContainer.x = app.screen.width / 2 - ballSprite.x;
       worldContainer.y = app.screen.height / 2 - ballSprite.y;
