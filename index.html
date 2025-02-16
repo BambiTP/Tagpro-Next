@@ -512,7 +512,7 @@
      * with strength = 0.25.
      ****************************************************/
     function createExplosionAt(position, dyingBody) {
-      var blastRadius = 0.4 * 5; // 1.6 TPU
+      var blastRadius = 0.4 * 4; // 1.6 TPU
       var strength = 2;
       var body = world.GetBodyList();
       while (body) {
@@ -562,7 +562,7 @@
           if (!dataB.canMove) return; // If ball B is dead, don't tag.
           // Ball A (flag carrier) dies.
           dataA.canMove = false;
-          var audio = new Audio("https://static.koalabeast.com/sounds/pop.mp3");
+          var audio = new Audio("pop.mp3");
           audio.play();
           createExplosionAt(bodyA.GetPosition(), bodyA);
           
