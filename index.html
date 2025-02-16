@@ -2,17 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Static Tilemap with Box2dWeb & PixiJS - Camera Follow</title>
+  <title>Static Tilemap Canvas with Box2dWeb & PixiJS</title>
   <style>
     body {
       margin: 0;
       background: #202020;
-      overflow: hidden; /* Prevent scrolling */
+      overflow: hidden;
     }
   </style>
 </head>
 <body>
-  <!-- Load local copies from your folder -->
+  <!-- Load local copies of PixiJS and Box2dWeb -->
   <script src="pixi.min.js"></script>
   <script src="Box2d.min.js"></script>
   
@@ -25,7 +25,7 @@
     // Base time step (60 FPS).
     var baseDT = 1 / 60;
     
-    // TagPro physics parameters (in TPU units):
+    // Physics parameters.
     var ACCELERATION = 1.5; // TPU/s²
     var MAX_SPEED = 2.5;    // TPU/s
     var DRAG = 0.5;         // per second
@@ -50,16 +50,15 @@
         b2World = Box2D.Dynamics.b2World,
         b2CircleShape = Box2D.Collision.Shapes.b2CircleShape;
     
-    // Create a Box2D world with zero gravity.
+    // Create a Box2D world with no gravity.
     var world = new b2World(new b2Vec2(0, 0), true);
     
     // Create the ball body at the center of the map.
     var bodyDef = new b2BodyDef();
     bodyDef.type = b2Body.b2_dynamicBody;
-    bodyDef.position.Set(MAP_WIDTH/(2*PIXELS_PER_TPU), MAP_HEIGHT/(2*PIXELS_PER_TPU));
+    bodyDef.position.Set(MAP_WIDTH / (2 * PIXELS_PER_TPU), MAP_HEIGHT / (2 * PIXELS_PER_TPU));
     var ballBody = world.CreateBody(bodyDef);
     
-    // Define the ball fixture.
     var fixDef = new b2FixtureDef();
     fixDef.shape = new b2CircleShape(ballRadiusTPU);
     fixDef.density = 1.0;
@@ -80,64 +79,53 @@
     });
     document.body.appendChild(app.view);
     
-    // Create a container for the world that we can move to simulate a camera.
+    // Create a container for the world; we'll move this to simulate a camera.
     var worldContainer = new PIXI.Container();
     app.stage.addChild(worldContainer);
     
-    // ---------------------------
-    // SPRITESHEET & FLOOR TILE TEXTURE
-    // ---------------------------
-    // Load the base texture from your tilesheet.
-    var baseTexture = PIXI.BaseTexture.from("tiles.png");
-    // Floor tile: defined as 2 tiles to the right on the 5th row
-    // (i.e. at x=40, y=160, with width and height of 40).
-    var floorTexture = new PIXI.Texture(baseTexture, new PIXI.Rectangle(40, 160, 40, 40));
-    
     /****************************************************
-     * BUILD THE STATIC MAP FROM A 2D ARRAY
+     * CREATE THE STATIC MAP USING AN OFF‑SCREEN CANVAS
      ****************************************************/
-    // Create a 2D array for the map.
-    // For now, a value of 1 means a floor tile.
-    var mapArray = [];
-    for (var row = 0; row < MAP_ROWS; row++) {
-      var rowArray = [];
-      for (var col = 0; col < MAP_COLS; col++) {
-        rowArray.push(1);
-      }
-      mapArray.push(rowArray);
-    }
+    // Create an off‑screen canvas the size of the map.
+    var mapCanvas = document.createElement('canvas');
+    mapCanvas.width = MAP_WIDTH;
+    mapCanvas.height = MAP_HEIGHT;
+    var mapCtx = mapCanvas.getContext('2d');
     
-    // Create a temporary container to hold the tile sprites.
-    var tileContainer = new PIXI.Container();
-    for (var row = 0; row < MAP_ROWS; row++) {
-      for (var col = 0; col < MAP_COLS; col++) {
-        // For a floor tile (value 1), add the floor tile sprite.
-        if (mapArray[row][col] === 1) {
-          var tileSprite = new PIXI.Sprite(floorTexture);
-          tileSprite.x = col * TILE_SIZE;
-          tileSprite.y = row * TILE_SIZE;
-          tileContainer.addChild(tileSprite);
+    // Load the spritesheet image.
+    var tileImage = new Image();
+    tileImage.src = "tiles.png";
+    tileImage.onload = function() {
+      // Draw a 50×50 grid of floor tiles.
+      // Our floor tile is taken from the spritesheet at (40, 160) with size 40×40.
+      for (var row = 0; row < MAP_ROWS; row++) {
+        for (var col = 0; col < MAP_COLS; col++) {
+          mapCtx.drawImage(
+            tileImage,       // source image
+            40, 160,         // source x, y (tile's location in the spritesheet)
+            TILE_SIZE, TILE_SIZE, // source width & height
+            col * TILE_SIZE, // destination x
+            row * TILE_SIZE, // destination y
+            TILE_SIZE, TILE_SIZE  // destination width & height
+          );
         }
       }
-    }
-    
-    // Render the tileContainer to a RenderTexture so it becomes a static image.
-    var mapRenderTexture = PIXI.RenderTexture.create({
-      width: MAP_WIDTH,
-      height: MAP_HEIGHT
-    });
-    app.renderer.render(tileContainer, mapRenderTexture);
-    
-    // Create a sprite from the RenderTexture and add it to the world.
-    var mapSprite = new PIXI.Sprite(mapRenderTexture);
-    worldContainer.addChildAt(mapSprite, 0);  // add behind other objects
+      // Create a PIXI texture from the off‑screen canvas.
+      var mapTexture = PIXI.Texture.from(mapCanvas);
+      var mapSprite = new PIXI.Sprite(mapTexture);
+      worldContainer.addChildAt(mapSprite, 0); // Add behind other objects.
+    };
     
     /****************************************************
      * SETUP THE BALL SPRITE
      ****************************************************/
-    // Create the ball sprite from the spritesheet.
-    var ballTexture = new PIXI.Texture(baseTexture, new PIXI.Rectangle(120, 0, 40, 40));
-    var ballSprite = new PIXI.Sprite(ballTexture);
+    // Create the ball sprite using the spritesheet.
+    // The ball is at (120, 0) on the spritesheet, 40x40 in size.
+    var ballFrame = new PIXI.Texture(
+      PIXI.BaseTexture.from("tiles.png"),
+      new PIXI.Rectangle(120, 0, 40, 40)
+    );
+    var ballSprite = new PIXI.Sprite(ballFrame);
     ballSprite.anchor.set(0.5);
     ballSprite.x = ballBody.GetPosition().x * PIXELS_PER_TPU;
     ballSprite.y = ballBody.GetPosition().y * PIXELS_PER_TPU;
@@ -148,7 +136,6 @@
      ****************************************************/
     var keys = {};
     window.addEventListener("keydown", function(e) {
-      // Prevent default arrow key actions.
       if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].indexOf(e.key) !== -1) {
         e.preventDefault();
       }
@@ -167,19 +154,16 @@
     app.ticker.add(function(delta) {
       var frameTime = baseDT * delta;
       
-      // Determine acceleration based on input keys.
+      // Determine acceleration based on keys.
       var ax = 0, ay = 0;
       if (keys["ArrowLeft"] || keys["a"] || keys["A"]) { ax = -ACCELERATION; }
       if (keys["ArrowRight"] || keys["d"] || keys["D"]) { ax = ACCELERATION; }
       if (keys["ArrowUp"] || keys["w"] || keys["W"]) { ay = -ACCELERATION; }
       if (keys["ArrowDown"] || keys["s"] || keys["S"]) { ay = ACCELERATION; }
       
-      // Get current velocity.
+      // Apply force to the ball body.
       var velocity = ballBody.GetLinearVelocity();
-      var vx = velocity.x;
-      var vy = velocity.y;
-      
-      // Compute force: F = mass * (acceleration - DRAG * velocity).
+      var vx = velocity.x, vy = velocity.y;
       var mass = ballBody.GetMass();
       var forceX = mass * (ax - DRAG * vx);
       var forceY = mass * (ay - DRAG * vy);
@@ -199,7 +183,7 @@
       if (vy < -MAX_SPEED) vy = -MAX_SPEED;
       ballBody.SetLinearVelocity(new b2Vec2(vx, vy));
       
-      // Update the ball's sprite position.
+      // Update the ball sprite position.
       var pos = ballBody.GetPosition();
       ballSprite.x = pos.x * PIXELS_PER_TPU;
       ballSprite.y = pos.y * PIXELS_PER_TPU;
