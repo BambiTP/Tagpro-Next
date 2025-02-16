@@ -50,6 +50,7 @@
       [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
       [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
       [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
+      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     ];
     
@@ -804,8 +805,9 @@
             new PIXI.Rectangle(520, 80, 40, 40)
           );
           console.log("Controlled ball picked up the flag!");
-          // Play friendly sound for controlled ball.
+          // Play friendly sound for controlled ball at 50% volume.
           var audio = new Audio("friendlyalert.mp3");
+          audio.volume = 0.5;
           audio.play();
         }
         
@@ -824,8 +826,9 @@
               new PIXI.Rectangle(520, 80, 40, 40)
             );
             console.log("Non-controlled ball picked up the flag!");
-            // Play alert sound for non-controlled ball.
+            // Play alert sound for non-controlled ball at 50% volume.
             var audio = new Audio("alert.mp3");
+            audio.volume = 0.5;
             audio.play();
           }
         }
