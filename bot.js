@@ -1,4 +1,16 @@
-  <script src="tf.min.js"></script>
+function loadScript(src, callback) {
+  const script = document.createElement('script'); // Create a script element
+  script.src = src;  // Set the source of the script (the URL or file path)
+  script.type = 'text/javascript';
+  script.onload = callback; // Optionally, execute a callback when the script is loaded
+
+  document.head.appendChild(script); // Append the script to the document's head
+}
+
+loadScript('tf.min.js', () => {
+  console.log('Script loaded successfully!');
+  // Now you can use functions from the loaded script
+});
 // ==========================================
 // 1. Define the RL Model
 // ==========================================
