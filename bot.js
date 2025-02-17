@@ -27,7 +27,7 @@ function updateEpsilon() {
     // Decrease the counter each step
     DOW--;
   }
-  
+  }
 function createRLModel() {
   const input = tf.input({ shape: [4] });
   const dense1 = tf.layers.dense({ units: 16, activation: 'relu' }).apply(input);
