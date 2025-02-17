@@ -7,7 +7,7 @@ function loadScript(src, callback) {
   document.head.appendChild(script); // Append the script to the document's head
 }
 
-loadScript('tf.min.js', () => {
+loadScript('tef.min.js', () => {
   console.log('Script loaded successfully!');
   // Now you can use functions from the loaded script
 });
