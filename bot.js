@@ -16,7 +16,7 @@ function updateEpsilon() {
   } else {
     // Decrease the counter each step
     ED--;
-  }
+  }}
 
   function download() {
   if (DOW === 0) {
