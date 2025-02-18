@@ -632,62 +632,66 @@
       var cp = worldManifold.m_points[0];
       var contactPoint = new b2Vec2(cp.x, cp.y);
       
-      if (dataA && dataB && dataA.hasFlag !== undefined && dataB.hasFlag !== undefined) {
-        if (dataA.team !== dataB.team) {
-          if (dataA.hasFlag && !dataB.hasFlag) {
-            if (!dataB.canMove) return;
-            dataA.canMove = false;
-            var audio = new Audio("friendlydrop.mp3");
-            audio.play();
-            setTimeout(function() {
-              createExplosionAt(contactPoint, bodyA);
-              disableCollisions(bodyA);
-              if (dataA.sprite) { dataA.sprite.visible = false; }
-              dataA.hasFlag = false;
-              dataB.hasFlag = true;
-              flag.carrier = bodyB;
-              console.log("Flag stolen: " + dataB.team + " team now has the flag.");
-              if (!dataA.isRespawning) {
-                dataA.isRespawning = true;
-                setTimeout(function(){
-                  bodyA.SetPosition(dataA.startPos);
-                  bodyA.SetLinearVelocity(new b2Vec2(0,0));
-                  if (dataA.sprite) { dataA.sprite.visible = true; }
-                  enableCollisions(bodyA);
-                  dataA.isRespawning = false;
-                  dataA.canMove = true;
-                }, 3000);
-              }
-            }, 1);
-          } else if (dataB.hasFlag && !dataA.hasFlag) {
-            if (!dataA.canMove) return;
-            dataB.canMove = false;
-            var audio = new Audio("drop.mp3");
-            audio.play();
-            setTimeout(function() {
-              createExplosionAt(contactPoint, bodyB);
-              disableCollisions(bodyB);
-              if (dataB.sprite) { dataB.sprite.visible = false; }
-              dataB.hasFlag = false;
-              dataA.hasFlag = true;
-              flag.carrier = bodyA;
-              console.log("Flag stolen: " + dataA.team + " team now has the flag.");
-              if (!dataB.isRespawning) {
-                dataB.isRespawning = true;
-                setTimeout(function(){
-                  bodyB.SetPosition(dataB.startPos);
-                  bodyB.SetLinearVelocity(new b2Vec2(0,0));
-                  if (dataB.sprite) { dataB.sprite.visible = true; }
-                  enableCollisions(bodyB);
-                  dataB.isRespawning = false;
-                  dataB.canMove = true;
-                }, 5000);
-              }
-            }, 1);
-          }
-        }
-      }
+if (dataA && dataB && dataA.hasFlag !== undefined && dataB.hasFlag !== undefined) {
+  if (dataA.team !== dataB.team) {
+    if (dataA.hasFlag && !dataB.hasFlag) {
+      if (!dataB.canMove) return;
+      dataA.canMove = false;
+      var audio = new Audio("friendlydrop.mp3");
+      audio.play();
       
+      createExplosionAt(contactPoint, bodyA);
+      disableCollisions(bodyA);
+      if (dataA.sprite) { dataA.sprite.visible = false; }
+      
+      dataA.hasFlag = false;
+      dataB.hasFlag = true;
+      flag.carrier = bodyB;
+      
+      console.log("Flag stolen: " + dataB.team + " team now has the flag.");
+      
+      if (!dataA.isRespawning) {
+        dataA.isRespawning = true;
+        setTimeout(function(){
+          bodyA.SetPosition(dataA.startPos);
+          bodyA.SetLinearVelocity(new b2Vec2(0, 0));
+          if (dataA.sprite) { dataA.sprite.visible = true; }
+          enableCollisions(bodyA);
+          dataA.isRespawning = false;
+          dataA.canMove = true;
+        }, 3000);
+      }
+    } else if (dataB.hasFlag && !dataA.hasFlag) {
+      if (!dataA.canMove) return;
+      dataB.canMove = false;
+      var audio = new Audio("drop.mp3");
+      audio.play();
+      
+      createExplosionAt(contactPoint, bodyB);
+      disableCollisions(bodyB);
+      if (dataB.sprite) { dataB.sprite.visible = false; }
+      
+      dataB.hasFlag = false;
+      dataA.hasFlag = true;
+      flag.carrier = bodyA;
+      
+      console.log("Flag stolen: " + dataA.team + " team now has the flag.");
+      
+      if (!dataB.isRespawning) {
+        dataB.isRespawning = true;
+        setTimeout(function(){
+          bodyB.SetPosition(dataB.startPos);
+          bodyB.SetLinearVelocity(new b2Vec2(0, 0));
+          if (dataB.sprite) { dataB.sprite.visible = true; }
+          enableCollisions(bodyB);
+          dataB.isRespawning = false;
+          dataB.canMove = true;
+        }, 5000);
+      }
+    }
+  }
+}
+
       if ((dataA && dataA.controlled) || (dataB && dataB.controlled)) {
         var controlledBody = dataA && dataA.controlled ? bodyA : bodyB;
         var tangent = new b2Vec2(-worldManifold.m_normal.y, worldManifold.m_normal.x);
