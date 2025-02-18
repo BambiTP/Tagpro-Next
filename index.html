@@ -863,9 +863,9 @@
     });
     
     function createExplosionAt(position, dyingBody) {
-      var blastRadius = 2.6;
+      var blastRadius = 0.4 * 7;
       var mass = 0.11341149479459152;
-      var impulseMultiplier = 0.06;
+      var impulseMultiplier = 1.25;
       var body = world.GetBodyList();
       while (body) {
         var data = body.GetUserData();
