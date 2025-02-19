@@ -885,7 +885,6 @@ nameColor = data.auth ? 0xBFFF00 : 0xFFFFFF;
       const ballTexture = new PIXI.Texture(baseTexture, textureRect);
       if(data.sprite) data.sprite.texture = ballTexture;
     });
-    document.getElementById('textureModal').style.display = "none";
   };
 
   const keys = {};
