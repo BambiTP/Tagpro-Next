@@ -6,11 +6,11 @@ function sendKey(direction, duration) {
 
     if (!bot[direction]) {
         bot[direction] = true;
-        console.log(`[sendKey] ${direction} pressed for ${duration}ms`);
+        //console.log(`[sendKey] ${direction} pressed for ${duration}ms`);
 
         setTimeout(() => {
             bot[direction] = false;
-            console.log(`[sendKey] ${direction} released`);
+           // console.log(`[sendKey] ${direction} released`);
         }, duration);
     }
 }
