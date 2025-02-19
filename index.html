@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>TagPro with Auto-Tiled Map, Dynamic Teams, Collision-Based Flag Steal</title>
+  <!-- Prevent zooming -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Dynamic TagPro Game</title>
   <style>
+    /* Global Styles */
     html, body {
       height: 100%;
       margin: 0;
@@ -15,880 +18,162 @@
       justify-content: center;
       align-items: center;
     }
-    /* Modal styles */
+    
+    /* Modal overlay */
     #textureModal {
-      display: none;
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.8);
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
       z-index: 1000;
+      display: flex;
       justify-content: center;
       align-items: center;
     }
-    #textureModalContent {
+    
+    /* Parent container: holds customization box and flair container */
+    #modalParent {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    
+    /* Customization white box */
+    #customizationBox {
       background: white;
       padding: 20px;
       border-radius: 5px;
+      box-sizing: border-box;
+      margin-top: 30px; /* Moved down 20px */
+    }
+    
+    /* Styling for labels and inputs within the customization box */
+    #customizationBox label {
+      display: inline-block;
+      text-align: right;
+      margin-right: 5px;
+    }
+    #customizationBox input, 
+    #customizationBox select {
+      margin-bottom: 5px;
+    }
+    
+    /* Flair container (separate from the white box) */
+    #flairContainer {
+      margin-top: -60px; /* Moved up 10px */
+    }
+    
+    #flairContainer h3 {
+      color: white;
       text-align: center;
+      margin-bottom: 10px;
+    }
+    
+    /* Grid for flairs: 15 columns; will create 11 rows when 165 icons are added */
+    #flairSelectContainer {
+      display: grid;
+      grid-template-columns: repeat(15, 31px);
+      grid-auto-rows: 31px;
+      gap: 4px;
+      background-color: lightgray;
+      padding: 5px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    
+    /* Each flair selection box */
+    .flairIcon {
+      width: 31px;
+      height: 31px;
+      background-color: gray;
+      border: 2px solid transparent;
+      box-sizing: border-box;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: box-shadow 0.2s ease;
+    }
+    
+    .flairIcon:hover {
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+    }
+    
+    .flairIcon.selected {
+      border-color: blue;
+    }
+    
+    /* Inner element for flair image (native 16x16) */
+    .flairIconInner {
+      width: 16px;
+      height: 16px;
+      background-repeat: no-repeat;
+      transform: translateY(3px);
+    }
+    
+    /* Optional: Style the close button */
+    #closeModal {
+      margin-top: 15px;
     }
   </style>
 </head>
 <body>
-  <!-- Modal HTML -->
+  <!-- Modal overlay -->
   <div id="textureModal">
-    <div id="textureModalContent">
-      <h2>Select Texture Pack</h2>
-      <select id="textureSelect"></select>
-      <br><br>
-      <button id="closeModal">Close</button>
+    <!-- Parent container holds both the white customization box and the flair grid -->
+    <div id="modalParent">
+      
+      <!-- Customization options container (white box) -->
+      <div id="customizationBox">
+        <h2>Customize Your Ball</h2>
+        <div id="textureSection">
+          <h3>Texture Pack</h3>
+          <select id="textureSelect"></select>
+        </div>
+        <div id="optionsContainer">
+          <div>
+            <label for="playerNameInput">Name:</label>
+            <input type="text" id="playerNameInput" value="Player1">
+          </div>
+          <div>
+            <label for="degreeInput">Degree:</label>
+            <input type="number" id="degreeInput" min="0" max="360" value="0">
+          </div>
+          <div>
+            <label for="authCheckbox">Auth:</label>
+            <input type="checkbox" id="authCheckbox">
+          </div>
+        </div>
+        <button id="closeModal">Close</button>
+      </div>
+      
+      <!-- Flair grid container (separate from the white box) -->
+      <div id="flairContainer">
+        <h3>Flair</h3>
+        <div id="flairSelectContainer">
+          <!-- Sample flair icons. Repeat/add until you have a 15 x 11 (165 icons) grid. -->
+          <div class="flairIcon">
+            <div class="flairIconInner" style="background-image: url('flair1.png');"></div>
+          </div>
+          <div class="flairIcon">
+            <div class="flairIconInner" style="background-image: url('flair2.png');"></div>
+          </div>
+          <div class="flairIcon">
+            <div class="flairIconInner" style="background-image: url('flair3.png');"></div>
+          </div>
+          <!-- Add additional flair icons here -->
+        </div>
+      </div>
+      
     </div>
   </div>
-
-  <!-- Load external libraries -->
+  
+  <!-- External libraries -->
   <script src="pixi.min.js"></script>
   <script src="Box2d.min.js"></script>
-
-  <script>
-    /****************************************************
-     * TEXTURE PACKS DEFINITION
-     ****************************************************/
-     var texturePacks = [{"name":"Classic","author":"LuckySpammer","url":"classic","tiles":"/textures/classic/tiles.png","speedpad":"/textures/classic/speedpad.png","speedpadRed":"/textures/classic/speedpadred.png","speedpadBlue":"/textures/classic/speedpadblue.png","portal":"/textures/classic/portal.png","portalRed":"/textures/classic/portalred.png","portalBlue":"/textures/classic/portalblue.png","splats":"/textures/classic/splats.png","popularity":3259028385,"popularityScore":"3259"},{"name":"Sniper Pack","author":"DOKE","url":"sniperpack","tiles":"/textures/sniperpack/tiles.png","speedpad":"/textures/sniperpack/speedpad.png","speedpadRed":"/textures/sniperpack/speedpadred.png","speedpadBlue":"/textures/sniperpack/speedpadblue.png","portal":"/textures/sniperpack/portal.png","portalRed":"/textures/sniperpack/portalred.png","portalBlue":"/textures/sniperpack/portalblue.png","splats":"/textures/sniperpack/splats.png","popularity":1437466820,"popularityScore":"1437"},{"name":"Muscle's Cup Gradients","author":"MuscleCups","url":"musclescupgradients","tiles":"/textures/musclescupgradients/tiles.png","speedpad":"/textures/musclescupgradients/speedpad.png","speedpadRed":"/textures/musclescupgradients/speedpadred.png","speedpadBlue":"/textures/musclescupgradients/speedpadblue.png","portal":"/textures/musclescupgradients/portal.png","portalRed":"/textures/musclescupgradients/portalred.png","portalBlue":"/textures/musclescupgradients/portalblue.png","splats":"/textures/musclescupgradients/splats.png","popularity":1436532153,"popularityScore":"1437"},{"name":"Coral Light","author":"MagicPigeon","url":"corallight","tiles":"/textures/corallight/tiles.png","speedpad":"/textures/corallight/speedpad.png","speedpadRed":"/textures/corallight/speedpadred.png","speedpadBlue":"/textures/corallight/speedpadblue.png","portal":"/textures/corallight/portal.png","portalRed":"/textures/corallight/portalred.png","portalBlue":"/textures/corallight/portalblue.png","splats":"/textures/corallight/splats.png","popularity":1161028272,"popularityScore":"1161"},{"name":"Muscle's Cup OG","author":"MuscleCups","url":"musclescupog","tiles":"/textures/musclescupog/tiles.png","speedpad":"/textures/musclescupog/speedpad.png","speedpadRed":"/textures/musclescupog/speedpadred.png","speedpadBlue":"/textures/musclescupog/speedpadblue.png","portal":"/textures/musclescupog/portal.png","portalRed":"/textures/musclescupog/portalred.png","portalBlue":"/textures/musclescupog/portalblue.png","splats":"/textures/musclescupog/splats.png","popularity":687443389,"popularityScore":"687"},{"name":"Coral","author":"MagicPigeon","url":"coral","tiles":"/textures/coral/tiles.png","speedpad":"/textures/coral/speedpad.png","speedpadRed":"/textures/coral/speedpadred.png","speedpadBlue":"/textures/coral/speedpadblue.png","portal":"/textures/coral/portal.png","portalRed":"/textures/coral/portalred.png","portalBlue":"/textures/coral/portalblue.png","splats":"/textures/coral/splats.png","popularity":457526831,"popularityScore":"458"},{"name":"MTBad","author":"mtbkr24","url":"mtbad","tiles":"/textures/mtbad/tiles.png","speedpad":"/textures/mtbad/speedpad.png","speedpadRed":"/textures/mtbad/speedpadred.png","speedpadBlue":"/textures/mtbad/speedpadblue.png","portal":"/textures/mtbad/portal.png","portalRed":"/textures/mtbad/portalred.png","portalBlue":"/textures/mtbad/portalblue.png","splats":"/textures/mtbad/splats.png","popularity":412084222,"popularityScore":"412"},{"name":"Flat","author":"why","url":"flat","tiles":"/textures/flat/tiles.png","speedpad":"/textures/flat/speedpad.png","speedpadRed":"/textures/flat/speedpadred.png","speedpadBlue":"/textures/flat/speedpadblue.png","portal":"/textures/flat/portal.png","portalRed":"/textures/flat/portalred.png","portalBlue":"/textures/flat/portalblue.png","splats":"/textures/flat/splats.png","popularity":401656196,"popularityScore":"402"},{"name":"MLTP Live","author":"Ron Spawnson","url":"mltplive","tiles":"/textures/mltplive/tiles.png","speedpad":"/textures/mltplive/speedpad.png","speedpadRed":"/textures/mltplive/speedpadred.png","speedpadBlue":"/textures/mltplive/speedpadblue.png","portal":"/textures/mltplive/portal.png","portalRed":"/textures/mltplive/portalred.png","portalBlue":"/textures/mltplive/portalblue.png","splats":"/textures/mltplive/splats.png","popularity":263983209,"popularityScore":"264"},{"name":"24K","author":"MagicPigeon","url":"24k","tiles":"/textures/24k/tiles.png","speedpad":"/textures/24k/speedpad.png","speedpadRed":"/textures/24k/speedpadred.png","speedpadBlue":"/textures/24k/speedpadblue.png","portal":"/textures/24k/portal.png","portalRed":"/textures/24k/portalred.png","portalBlue":"/textures/24k/portalblue.png","splats":"/textures/24k/splats.png","popularity":233605766,"popularityScore":"234"},{"name":"Precision Dark","author":"Peach Fuzz","url":"precisiondark","tiles":"/textures/precisiondark/tiles.png","speedpad":"/textures/precisiondark/speedpad.png","speedpadRed":"/textures/precisiondark/speedpadred.png","speedpadBlue":"/textures/precisiondark/speedpadblue.png","portal":"/textures/precisiondark/portal.png","portalRed":"/textures/precisiondark/portalred.png","portalBlue":"/textures/precisiondark/portalblue.png","splats":"/textures/precisiondark/splats.png","popularity":213202866,"popularityScore":"213"},{"name":"Plumb","author":"SuperTed","url":"plumb","tiles":"/textures/plumb/tiles.png","speedpad":"/textures/plumb/speedpad.png","speedpadRed":"/textures/plumb/speedpadred.png","speedpadBlue":"/textures/plumb/speedpadblue.png","portal":"/textures/plumb/portal.png","portalRed":"/textures/plumb/portalred.png","portalBlue":"/textures/plumb/portalblue.png","splats":"/textures/plumb/splats.png","popularity":192741223,"popularityScore":"193"},{"name":"Plique","author":"Despair","url":"plique","tiles":"/textures/plique/tiles.png","speedpad":"/textures/plique/speedpad.png","speedpadRed":"/textures/plique/speedpadred.png","speedpadBlue":"/textures/plique/speedpadblue.png","portal":"/textures/plique/portal.png","portalRed":"/textures/plique/portalred.png","portalBlue":"/textures/plique/portalblue.png","splats":"/textures/plique/splats.png","popularity":183995905,"popularityScore":"184"},{"name":"Isometric","author":"mtbkr24","url":"isometric","tiles":"/textures/isometric/tiles.png","speedpad":"/textures/isometric/speedpad.png","speedpadRed":"/textures/isometric/speedpadred.png","speedpadBlue":"/textures/isometric/speedpadblue.png","portal":"/textures/isometric/portal.png","portalRed":"/textures/isometric/portalred.png","portalBlue":"/textures/isometric/portalblue.png","splats":"/textures/isometric/splats.png","popularity":167044212,"popularityScore":"167"},{"name":"Sparkle","author":"MagicPigeon","url":"sparkle","tiles":"/textures/sparkle/tiles.png","speedpad":"/textures/sparkle/speedpad.png","speedpadRed":"/textures/sparkle/speedpadred.png","speedpadBlue":"/textures/sparkle/speedpadblue.png","portal":"/textures/sparkle/portal.png","portalRed":"/textures/sparkle/portalred.png","portalBlue":"/textures/sparkle/portalblue.png","splats":"/textures/sparkle/splats.png","popularity":166286098,"popularityScore":"166"},{"name":"CamsPP Dark","author":"Cam","url":"camsppdark","tiles":"/textures/camsppdark/tiles.png","speedpad":"/textures/camsppdark/speedpad.png","speedpadRed":"/textures/camsppdark/speedpadred.png","speedpadBlue":"/textures/camsppdark/speedpadblue.png","portal":"/textures/camsppdark/portal.png","portalRed":"/textures/camsppdark/portalred.png","portalBlue":"/textures/camsppdark/portalblue.png","splats":"/textures/camsppdark/splats.png","popularity":159743715,"popularityScore":"160"},{"name":"CamsPP Old","author":"Cam","url":"camsppold","tiles":"/textures/camsppold/tiles.png","speedpad":"/textures/camsppold/speedpad.png","speedpadRed":"/textures/camsppold/speedpadred.png","speedpadBlue":"/textures/camsppold/speedpadblue.png","portal":"/textures/camsppold/portal.png","portalRed":"/textures/camsppold/portalred.png","portalBlue":"/textures/camsppold/portalblue.png","splats":"/textures/camsppold/splats.png","popularity":157841341,"popularityScore":"158"},{"name":"CMYK","author":"MagicPigeon","url":"cmyk","tiles":"/textures/cmyk/tiles.png","speedpad":"/textures/cmyk/speedpad.png","speedpadRed":"/textures/cmyk/speedpadred.png","speedpadBlue":"/textures/cmyk/speedpadblue.png","portal":"/textures/cmyk/portal.png","portalRed":"/textures/cmyk/portalred.png","portalBlue":"/textures/cmyk/portalblue.png","splats":"/textures/cmyk/splats.png","popularity":144688179,"popularityScore":"145"},{"name":"CamsPP Light","author":"Cam","url":"camspplight","tiles":"/textures/camspplight/tiles.png","speedpad":"/textures/camspplight/speedpad.png","speedpadRed":"/textures/camspplight/speedpadred.png","speedpadBlue":"/textures/camspplight/speedpadblue.png","portal":"/textures/camspplight/portal.png","portalRed":"/textures/camspplight/portalred.png","portalBlue":"/textures/camspplight/portalblue.png","splats":"/textures/camspplight/splats.png","popularity":135009946,"popularityScore":"135"},{"name":"Electric","author":"Bug","url":"electric","tiles":"/textures/electric/tiles.png","speedpad":"/textures/electric/speedpad.png","speedpadRed":"/textures/electric/speedpadred.png","speedpadBlue":"/textures/electric/speedpadblue.png","portal":"/textures/electric/portal.png","portalRed":"/textures/electric/portalred.png","portalBlue":"/textures/electric/portalblue.png","splats":"/textures/electric/splats.png","popularity":127175831,"popularityScore":"127"},{"name":"Sketch+","author":"MagicPigeon","url":"sketch","tiles":"/textures/sketch/tiles.png","speedpad":"/textures/sketch/speedpad.png","speedpadRed":"/textures/sketch/speedpadred.png","speedpadBlue":"/textures/sketch/speedpadblue.png","portal":"/textures/sketch/portal.png","portalRed":"/textures/sketch/portalred.png","portalBlue":"/textures/sketch/portalblue.png","splats":"/textures/sketch/splats.png","popularity":126489052,"popularityScore":"126"},{"name":"Sharp","author":"MagicPigeon","url":"sharp","tiles":"/textures/sharp/tiles.png","speedpad":"/textures/sharp/speedpad.png","speedpadRed":"/textures/sharp/speedpadred.png","speedpadBlue":"/textures/sharp/speedpadblue.png","portal":"/textures/sharp/portal.png","portalRed":"/textures/sharp/portalred.png","portalBlue":"/textures/sharp/portalblue.png","splats":"/textures/sharp/splats.png","popularity":103226439,"popularityScore":"103"},{"name":"PastelPro","author":"SuperTed","url":"pastelpro","tiles":"/textures/pastelpro/tiles.png","speedpad":"/textures/pastelpro/speedpad.png","speedpadRed":"/textures/pastelpro/speedpadred.png","speedpadBlue":"/textures/pastelpro/speedpadblue.png","portal":"/textures/pastelpro/portal.png","portalRed":"/textures/pastelpro/portalred.png","portalBlue":"/textures/pastelpro/portalblue.png","splats":"/textures/pastelpro/splats.png","popularity":99507002,"popularityScore":"100"},{"name":"Element+","author":"MagicPigeon","url":"element","tiles":"/textures/element/tiles.png","speedpad":"/textures/element/speedpad.png","speedpadRed":"/textures/element/speedpadred.png","speedpadBlue":"/textures/element/speedpadblue.png","portal":"/textures/element/portal.png","portalRed":"/textures/element/portalred.png","portalBlue":"/textures/element/portalblue.png","splats":"/textures/element/splats.png","popularity":98019109,"popularityScore":"98"},{"name":"Mural","author":"DaEvil1","url":"mural","tiles":"/textures/mural/tiles.png","speedpad":"/textures/mural/speedpad.png","speedpadRed":"/textures/mural/speedpadred.png","speedpadBlue":"/textures/mural/speedpadblue.png","portal":"/textures/mural/portal.png","portalRed":"/textures/mural/portalred.png","portalBlue":"/textures/mural/portalblue.png","splats":"/textures/mural/splats.png","popularity":80387834,"popularityScore":"80"},{"name":"Supreme","author":"bicycle","url":"supreme","tiles":"/textures/supreme/tiles.png","speedpad":"/textures/supreme/speedpad.png","speedpadRed":"/textures/supreme/speedpadred.png","speedpadBlue":"/textures/supreme/speedpadblue.png","portal":"/textures/supreme/portal.png","portalRed":"/textures/supreme/portalred.png","portalBlue":"/textures/supreme/portalblue.png","splats":"/textures/supreme/splats.png","popularity":69068153,"popularityScore":"69"},{"name":"Circlejerk","author":"Bizkut and Ion","url":"circlejerk","tiles":"/textures/circlejerk/tiles.png","speedpad":"/textures/circlejerk/speedpad.png","speedpadRed":"/textures/circlejerk/speedpadred.png","speedpadBlue":"/textures/circlejerk/speedpadblue.png","portal":"/textures/circlejerk/portal.png","portalRed":"/textures/circlejerk/portalred.png","portalBlue":"/textures/circlejerk/portalblue.png","splats":"/textures/circlejerk/splats.png","popularity":68828720,"popularityScore":"69"},{"name":"nom","author":"anom","url":"nom","tiles":"/textures/nom/tiles.png","speedpad":"/textures/nom/speedpad.png","speedpadRed":"/textures/nom/speedpadred.png","speedpadBlue":"/textures/nom/speedpadblue.png","portal":"/textures/nom/portal.png","portalRed":"/textures/nom/portalred.png","portalBlue":"/textures/nom/portalblue.png","splats":"/textures/nom/splats.png","popularity":58222444,"popularityScore":"58"},{"name":"Starlight","author":"MagicPigeon","url":"starlight","tiles":"/textures/starlight/tiles.png","speedpad":"/textures/starlight/speedpad.png","speedpadRed":"/textures/starlight/speedpadred.png","speedpadBlue":"/textures/starlight/speedpadblue.png","portal":"/textures/starlight/portal.png","portalRed":"/textures/starlight/portalred.png","portalBlue":"/textures/starlight/portalblue.png","splats":"/textures/starlight/splats.png","popularity":54456391,"popularityScore":"54"},{"name":"TerminalPX","author":"pooppants","url":"terminalpx","tiles":"/textures/terminalpx/tiles.png","speedpad":"/textures/terminalpx/speedpad.png","speedpadRed":"/textures/terminalpx/speedpadred.png","speedpadBlue":"/textures/terminalpx/speedpadblue.png","portal":"/textures/terminalpx/portal.png","portalRed":"/textures/terminalpx/portalred.png","portalBlue":"/textures/terminalpx/portalblue.png","splats":"/textures/terminalpx/splats.png","popularity":49589262,"popularityScore":"50"},{"name":"Brioche Light","author":"Brioche","url":"briochelight","tiles":"/textures/briochelight/tiles.png","speedpad":"/textures/briochelight/speedpad.png","speedpadRed":"/textures/briochelight/speedpadred.png","speedpadBlue":"/textures/briochelight/speedpadblue.png","portal":"/textures/briochelight/portal.png","portalRed":"/textures/briochelight/portalred.png","portalBlue":"/textures/briochelight/portalblue.png","splats":"/textures/briochelight/splats.png","popularity":46374492,"popularityScore":"46"},{"name":"Crystal","author":"MagicPigeon","url":"crystal","tiles":"/textures/crystal/tiles.png","speedpad":"/textures/crystal/speedpad.png","speedpadRed":"/textures/crystal/speedpadred.png","speedpadBlue":"/textures/crystal/speedpadblue.png","portal":"/textures/crystal/portal.png","portalRed":"/textures/crystal/portalred.png","portalBlue":"/textures/crystal/portalblue.png","splats":"/textures/crystal/splats.png","popularity":41009434,"popularityScore":"41"},{"name":"Bold","author":"MagicPigeon","url":"bold","tiles":"/textures/bold/tiles.png","speedpad":"/textures/bold/speedpad.png","speedpadRed":"/textures/bold/speedpadred.png","speedpadBlue":"/textures/bold/speedpadblue.png","portal":"/textures/bold/portal.png","portalRed":"/textures/bold/portalred.png","portalBlue":"/textures/bold/portalblue.png","splats":"/textures/bold/splats.png","popularity":35898990,"popularityScore":"36"},{"name":"Turbo","author":"Ooops","url":"turbo","tiles":"/textures/turbo/tiles.png","speedpad":"/textures/turbo/speedpad.png","speedpadRed":"/textures/turbo/speedpadred.png","speedpadBlue":"/textures/turbo/speedpadblue.png","portal":"/textures/turbo/portal.png","portalRed":"/textures/turbo/portalred.png","portalBlue":"/textures/turbo/portalblue.png","splats":"/textures/turbo/splats.png","popularity":35092795,"popularityScore":"35"},{"name":"Granata","author":"_Coffee_","url":"granata","tiles":"/textures/granata/tiles.png","speedpad":"/textures/granata/speedpad.png","speedpadRed":"/textures/granata/speedpadred.png","speedpadBlue":"/textures/granata/speedpadblue.png","portal":"/textures/granata/portal.png","portalRed":"/textures/granata/portalred.png","portalBlue":"/textures/granata/portalblue.png","splats":"/textures/granata/splats.png","popularity":32450816,"popularityScore":"32"},{"name":"Celeste","author":"MagicPigeon","url":"celeste","tiles":"/textures/celeste/tiles.png","speedpad":"/textures/celeste/speedpad.png","speedpadRed":"/textures/celeste/speedpadred.png","speedpadBlue":"/textures/celeste/speedpadblue.png","portal":"/textures/celeste/portal.png","portalRed":"/textures/celeste/portalred.png","portalBlue":"/textures/celeste/portalblue.png","splats":"/textures/celeste/splats.png","popularity":30547603,"popularityScore":"31"},{"name":"Brioche Deluxe","author":"Bumballbee and Brioche","url":"briochedeluxe","tiles":"/textures/briochedeluxe/tiles.png","speedpad":"/textures/briochedeluxe/speedpad.png","speedpadRed":"/textures/briochedeluxe/speedpadred.png","speedpadBlue":"/textures/briochedeluxe/speedpadblue.png","portal":"/textures/briochedeluxe/portal.png","portalRed":"/textures/briochedeluxe/portalred.png","portalBlue":"/textures/briochedeluxe/portalblue.png","splats":"/textures/briochedeluxe/splats.png","popularity":29724638,"popularityScore":"30"},{"name":"Brioche Extra Light","author":"Brioche","url":"briocheextralight","tiles":"/textures/briocheextralight/tiles.png","speedpad":"/textures/briocheextralight/speedpad.png","speedpadRed":"/textures/briocheextralight/speedpadred.png","speedpadBlue":"/textures/briocheextralight/speedpadblue.png","portal":"/textures/briocheextralight/portal.png","portalRed":"/textures/briocheextralight/portalred.png","portalBlue":"/textures/briocheextralight/portalblue.png","splats":"/textures/briocheextralight/splats.png","popularity":28923330,"popularityScore":"29"},{"name":"TagPro Next Classic","author":"KoalaBeast, MagicPigeon, Ronding","url":"tagpronextclassic","tiles":"/textures/tagpronextclassic/tiles.png","speedpad":"/textures/tagpronextclassic/speedpad.png","speedpadRed":"/textures/tagpronextclassic/speedpadred.png","speedpadBlue":"/textures/tagpronextclassic/speedpadblue.png","portal":"/textures/tagpronextclassic/portal.png","portalRed":"/textures/tagpronextclassic/portalred.png","portalBlue":"/textures/tagpronextclassic/portalblue.png","splats":"/textures/tagpronextclassic/splats.png","popularity":27984534,"popularityScore":"28"},{"name":"Flat (Bug)","author":"Bug","url":"flatbug","tiles":"/textures/flatbug/tiles.png","speedpad":"/textures/flatbug/speedpad.png","speedpadRed":"/textures/flatbug/speedpadred.png","speedpadBlue":"/textures/flatbug/speedpadblue.png","portal":"/textures/flatbug/portal.png","portalRed":"/textures/flatbug/portalred.png","portalBlue":"/textures/flatbug/portalblue.png","splats":"/textures/flatbug/splats.png","popularity":24945237,"popularityScore":"25"},{"name":"Maxima","author":"MagicPigeon","url":"maxima","tiles":"/textures/maxima/tiles.png","speedpad":"/textures/maxima/speedpad.png","speedpadRed":"/textures/maxima/speedpadred.png","speedpadBlue":"/textures/maxima/speedpadblue.png","portal":"/textures/maxima/portal.png","portalRed":"/textures/maxima/portalred.png","portalBlue":"/textures/maxima/portalblue.png","splats":"/textures/maxima/splats.png","popularity":24314189,"popularityScore":"24"},{"name":"Jello","author":"MC Ride","url":"jello","tiles":"/textures/jello/tiles.png","speedpad":"/textures/jello/speedpad.png","speedpadRed":"/textures/jello/speedpadred.png","speedpadBlue":"/textures/jello/speedpadblue.png","portal":"/textures/jello/portal.png","portalRed":"/textures/jello/portalred.png","portalBlue":"/textures/jello/portalblue.png","splats":"/textures/jello/splats.png","popularity":19824774,"popularityScore":"20"},{"name":"Chip","author":"anom","url":"chip","tiles":"/textures/chip/tiles.png","speedpad":"/textures/chip/speedpad.png","speedpadRed":"/textures/chip/speedpadred.png","speedpadBlue":"/textures/chip/speedpadblue.png","portal":"/textures/chip/portal.png","portalRed":"/textures/chip/portalred.png","portalBlue":"/textures/chip/portalblue.png","splats":"/textures/chip/splats.png","popularity":17452655,"popularityScore":"17"},{"name":"Wave","author":"Waterwheel","url":"wave","tiles":"/textures/wave/tiles.png","speedpad":"/textures/wave/speedpad.png","speedpadRed":"/textures/wave/speedpadred.png","speedpadBlue":"/textures/wave/speedpadblue.png","portal":"/textures/wave/portal.png","portalRed":"/textures/wave/portalred.png","portalBlue":"/textures/wave/portalblue.png","splats":"/textures/wave/splats.png","popularity":16795172,"popularityScore":"17"},{"name":"Mumbo","author":"MagicPigeon","url":"mumbo","tiles":"/textures/mumbo/tiles.png","speedpad":"/textures/mumbo/speedpad.png","speedpadRed":"/textures/mumbo/speedpadred.png","speedpadBlue":"/textures/mumbo/speedpadblue.png","portal":"/textures/mumbo/portal.png","portalRed":"/textures/mumbo/portalred.png","portalBlue":"/textures/mumbo/portalblue.png","splats":"/textures/mumbo/splats.png","popularity":14947784,"popularityScore":"15"},{"name":"Funko","author":"MC Ride","url":"funko","tiles":"/textures/funko/tiles.png","speedpad":"/textures/funko/speedpad.png","speedpadRed":"/textures/funko/speedpadred.png","speedpadBlue":"/textures/funko/speedpadblue.png","portal":"/textures/funko/portal.png","portalRed":"/textures/funko/portalred.png","portalBlue":"/textures/funko/portalblue.png","splats":"/textures/funko/splats.png","popularity":7612965,"popularityScore":"8"},{"name":"Ancient Gems","author":"Flaccid Trip ft. jazzz","url":"ancientgems","tiles":"/textures/ancientgems/tiles.png","speedpad":"/textures/ancientgems/speedpad.png","speedpadRed":"/textures/ancientgems/speedpadred.png","speedpadBlue":"/textures/ancientgems/speedpadblue.png","portal":"/textures/ancientgems/portal.png","portalRed":"/textures/ancientgems/portalred.png","portalBlue":"/textures/ancientgems/portalblue.png","splats":"/textures/ancientgems/splats.png","popularity":5546128,"popularityScore":"6"},{"name":"Yin & Yang","author":"_Coffee_","url":"yinyang","tiles":"/textures/yinyang/tiles.png","speedpad":"/textures/yinyang/speedpad.png","speedpadRed":"/textures/yinyang/speedpadred.png","speedpadBlue":"/textures/yinyang/speedpadblue.png","portal":"/textures/yinyang/portal.png","portalRed":"/textures/yinyang/portalred.png","portalBlue":"/textures/yinyang/portalblue.png","splats":"/textures/yinyang/splats.png","popularity":5255750,"popularityScore":"5"},{"name":"Spongepack","author":"_Coffee_","url":"spongepack","tiles":"/textures/spongepack/tiles.png","speedpad":"/textures/spongepack/speedpad.png","speedpadRed":"/textures/spongepack/speedpadred.png","speedpadBlue":"/textures/spongepack/speedpadblue.png","portal":"/textures/spongepack/portal.png","portalRed":"/textures/spongepack/portalred.png","portalBlue":"/textures/spongepack/portalblue.png","splats":"/textures/spongepack/splats.png","popularity":5125995,"popularityScore":"5"},{"name":"Xmas","author":"jazzz","url":"xmas","tiles":"/textures/xmas/tiles.png","speedpad":"/textures/xmas/speedpad.png","speedpadRed":"/textures/xmas/speedpadred.png","speedpadBlue":"/textures/xmas/speedpadblue.png","portal":"/textures/xmas/portal.png","portalRed":"/textures/xmas/portalred.png","portalBlue":"/textures/xmas/portalblue.png","splats":"/textures/xmas/splats.png","popularity":3897718,"popularityScore":"4"},{"name":"Afloat","author":"Pingu","url":"afloat","tiles":"/textures/afloat/tiles.png","speedpad":"/textures/afloat/speedpad.png","speedpadRed":"/textures/afloat/speedpadred.png","speedpadBlue":"/textures/afloat/speedpadblue.png","portal":"/textures/afloat/portal.png","portalRed":"/textures/afloat/portalred.png","portalBlue":"/textures/afloat/portalblue.png","splats":"/textures/afloat/splats.png","popularity":2873024,"popularityScore":"3"},{"name":"Twine","author":"Flaccid Trip","url":"twine","tiles":"/textures/twine/tiles.png","speedpad":"/textures/twine/speedpad.png","speedpadRed":"/textures/twine/speedpadred.png","speedpadBlue":"/textures/twine/speedpadblue.png","portal":"/textures/twine/portal.png","portalRed":"/textures/twine/portalred.png","portalBlue":"/textures/twine/portalblue.png","splats":"/textures/twine/splats.png","popularity":2340488,"popularityScore":"2"},{"name":"Bowling","author":"_Coffee_","url":"bowling","tiles":"/textures/bowling/tiles.png","speedpad":"/textures/bowling/speedpad.png","speedpadRed":"/textures/bowling/speedpadred.png","speedpadBlue":"/textures/bowling/speedpadblue.png","portal":"/textures/bowling/portal.png","portalRed":"/textures/bowling/portalred.png","portalBlue":"/textures/bowling/portalblue.png","splats":"/textures/bowling/splats.png","popularity":913939,"popularityScore":"1"},{"name":"Supreme Shine","author":"Flaccid Trip","url":"supremeshine","tiles":"/textures/supremeshine/tiles.png","speedpad":"/textures/supremeshine/speedpad.png","speedpadRed":"/textures/supremeshine/speedpadred.png","speedpadBlue":"/textures/supremeshine/speedpadblue.png","portal":"/textures/supremeshine/portal.png","portalRed":"/textures/supremeshine/portalred.png","portalBlue":"/textures/supremeshine/portalblue.png","splats":"/textures/supremeshine/splats.png","popularity":696670,"popularityScore":"1"},{"name":"Softpaint","author":"Xcissors ft. anom","url":"softpaint","tiles":"/textures/softpaint/tiles.png","speedpad":"/textures/softpaint/speedpad.png","speedpadRed":"/textures/softpaint/speedpadred.png","speedpadBlue":"/textures/softpaint/speedpadblue.png","portal":"/textures/softpaint/portal.png","portalRed":"/textures/softpaint/portalred.png","portalBlue":"/textures/softpaint/portalblue.png","splats":"/textures/softpaint/splats.png","popularity":618115,"popularityScore":"1"},{"name":"Return","author":"Flaccid Trip","url":"return","tiles":"/textures/return/tiles.png","speedpad":"/textures/return/speedpad.png","speedpadRed":"/textures/return/speedpadred.png","speedpadBlue":"/textures/return/speedpadblue.png","portal":"/textures/return/portal.png","portalRed":"/textures/return/portalred.png","portalBlue":"/textures/return/portalblue.png","splats":"/textures/return/splats.png","popularity":149148,"popularityScore":"0"}];
-    // Set the default texture pack (Classic)
-    var currentTexturePack = texturePacks[0];
-
-    /****************************************************
-     * SETUP THE TEXTURE PACK DROPDOWN IN THE MODAL
-     ****************************************************/
-    var textureSelect = document.getElementById('textureSelect');
-    texturePacks.forEach((pack, index) => {
-      var option = document.createElement('option');
-      option.value = index;
-      option.textContent = pack.name;
-      textureSelect.appendChild(option);
-    });
-
-    textureSelect.addEventListener('change', function(e) {
-      var selectedIndex = parseInt(e.target.value, 10);
-      var selectedPack = texturePacks[selectedIndex];
-      updateTexturePack(selectedPack);
-    });
-
-    /****************************************************
-     * UPDATE TEXTURE PACK FUNCTION
-     ****************************************************/
-    function updateTexturePack(selectedPack) {
-      currentTexturePack = selectedPack;
-      
-      // Update the tile image (with cache busting)
-      tileImage.src = "https://static.koalabeast.com" + selectedPack.tiles + "?t=" + Date.now();
-      tileImage.onload = function() {
-        drawMapOnCanvas(mapCtx);
-        // Re-create the map texture from the updated canvas
-        if(mapSprite) {
-          mapSprite.texture = new PIXI.Texture(new PIXI.BaseTexture(mapCanvas));
-        }
-      };
-
-      var baseTextureForFlag = PIXI.BaseTexture.from("https://static.koalabeast.com" + selectedPack.tiles);
-      
-      // Use the correct flag rectangle based on whether the flag is taken.
-      var flagRect = flag.taken 
-          ? new PIXI.Rectangle(520, 80, 40, 40)
-          : new PIXI.Rectangle(520, 40, 40, 40);
-      var flagTexture = new PIXI.Texture(baseTextureForFlag, flagRect);
-      if(flagSprite) { 
-        flagSprite.texture = flagTexture; 
-      }
-
-      // Update mini flag texture similarly.
-      var miniFlagRect = flag.taken 
-          ? new PIXI.Rectangle(520, 80, 40, 40)
-          : new PIXI.Rectangle(520, 40, 40, 40);
-      var miniFlagTexture = new PIXI.Texture(baseTextureForFlag, miniFlagRect);
-      if(miniFlagSprite) { 
-        miniFlagSprite.texture = miniFlagTexture; 
-      }
-
-      // Update player textures.
-      players.forEach(function(player) {
-        var data = player.GetUserData();
-        var textureRect;
-        if(data.team === 'red') {
-          textureRect = new PIXI.Rectangle(560, 0, 40, 40);
-        } else if(data.team === 'blue') {
-          textureRect = new PIXI.Rectangle(600, 0, 40, 40);
-        } else {
-          textureRect = new PIXI.Rectangle(560, 0, 40, 40);
-        }
-        var baseTexture = PIXI.BaseTexture.from("https://static.koalabeast.com" + selectedPack.tiles);
-        var ballTexture = new PIXI.Texture(baseTexture, textureRect);
-        data.sprite.texture = ballTexture;
-      });
-
-      // Close the modal after selection.
-      document.getElementById('textureModal').style.display = "none";
-    }
-
-    /****************************************************
-     * TOGGLE THE MODAL ON ESC KEY
-     ****************************************************/
-    document.addEventListener('keydown', function(e) {
-      if(e.key === "Escape") {
-        var modal = document.getElementById('textureModal');
-        modal.style.display = (modal.style.display === "none" || modal.style.display === "") ? "flex" : "none";
-      }
-    });
-
-    // Also allow the user to close the modal with the Close button.
-    document.getElementById('closeModal').addEventListener('click', function() {
-      document.getElementById('textureModal').style.display = "none";
-    });
-
-    /****************************************************
-     * GAME CODE STARTS HERE
-     ****************************************************/
-    // CONSTANTS & MAP SETUP
-    const TILE_SIZE = 40;         // Each tile is 40×40 pixels.
-    const QUAD_SIZE = TILE_SIZE / 2; // Each quadrant is 20×20 pixels.
-
-    var tileMap = [
-      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,1],
-      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-    ];
-    
-    var wallTypes = {
-      1: { wallSolids: 0xff },
-      2: { wallSolids: 0xff },
-      3: { wallSolids: 0xd2 },
-      4: { wallSolids: 0x4b },
-      5: { wallSolids: 0xb4 }
-    };
-
-    var tiles = { 6: { sx: 520, sy: 160 } };
-
-    function wallSolidsAt(col, row) {
-      if(col < 0 || row < 0 || row >= tileMap.length || col >= tileMap[0].length) return 0;
-      var code = tileMap[row][col];
-      if(code === 6) return 0;
-      var wt = wallTypes[code];
-      return wt ? wt.wallSolids : 0;
-    }
-    
-    var quadrantCoords = {
-      "132": [10.5, 7.5],
-      "232": [11, 7.5],
-      "332": [11, 8],
-      "032": [10.5, 8],
-      "132d": [0.5, 3.5],
-      "232d": [1, 3.5],
-      "032d": [0.5, 4],
-      "143": [4.5, 9.5],
-      "243": [5, 9.5],
-      "343": [5, 10],
-      "043": [4.5, 10],
-      "143d": [1.5, 2.5],
-      "243d": [2, 2.5],
-      "043d": [1.5, 3],
-      "154": [6.5, 9.5],
-      "254": [7, 9.5],
-      "354": [7, 10],
-      "054": [6.5, 10],
-      "154d": [9.5, 2.5],
-      "254d": [10, 2.5],
-      "354d": [10, 3],
-      "165": [0.5, 7.5],
-      "265": [1, 7.5],
-      "365": [1, 8],
-      "065": [0.5, 8],
-      "165d": [10.5, 3.5],
-      "265d": [11, 3.5],
-      "365d": [11, 4],
-      "176": [1.5, 6.5],
-      "276": [2, 6.5],
-      "376": [2, 7],
-      "076": [1.5, 7],
-      "276d": [9, 1.5],
-      "376d": [9, 2],
-      "076d": [8.5, 2],
-      "107": [6.5, 8.5],
-      "207": [7, 8.5],
-      "307": [7, 9],
-      "007": [6.5, 9],
-      "207d": [11, 1.5],
-      "307d": [11, 2],
-      "007d": [10.5, 2],
-      "110": [4.5, 8.5],
-      "210": [5, 8.5],
-      "310": [5, 9],
-      "010": [4.5, 9],
-      "110d": [0.5, 1.5],
-      "310d": [1, 2],
-      "010d": [0.5, 2],
-      "121": [9.5, 6.5],
-      "221": [10, 6.5],
-      "321": [10, 7],
-      "021": [9.5, 7],
-      "121d": [2.5, 1.5],
-      "321d": [3, 2],
-      "021d": [2.5, 2],
-      "142": [1.5, 7.5],
-      "242": [2, 7.5],
-      "042": [1.5, 8],
-      "142d": [10.5, 0.5],
-      "242d": [11, 0.5],
-      "042d": [10.5, 1],
-      "153": [5.5, 6.5],
-      "253": [6, 6.5],
-      "353": [6, 7],
-      "053": [5.5, 7],
-      "153d": [5.5, 0.5],
-      "253d": [6, 0.5],
-      "164": [9.5, 7.5],
-      "264": [10, 7.5],
-      "364": [10, 8],
-      "164d": [0.5, 0.5],
-      "264d": [1, 0.5],
-      "364d": [1, 1],
-      "175": [4.5, 5.5],
-      "275": [5, 5.5],
-      "375": [5, 6],
-      "075": [4.5, 6],
-      "275d": [7, 1.5],
-      "375d": [7, 2],
-      "206": [4, 9.5],
-      "306": [4, 10],
-      "006": [3.5, 10],
-      "206d": [2, 3.5],
-      "306d": [2, 4],
-      "006d": [1.5, 4],
-      "117": [5.5, 2.5],
-      "217": [6, 2.5],
-      "317": [6, 4],
-      "017": [5.5, 4],
-      "317d": [6, 3],
-      "017d": [5.5, 3],
-      "120": [7.5, 9.5],
-      "320": [8, 10],
-      "020": [7.5, 10],
-      "120d": [9.5, 3.5],
-      "320d": [10, 4],
-      "020d": [9.5, 4],
-      "131": [6.5, 5.5],
-      "231": [7, 5.5],
-      "331": [7, 6],
-      "031": [6.5, 6],
-      "131d": [4.5, 1.5],
-      "031d": [4.5, 2],
-      "141": [7.5, 8.5],
-      "241": [8, 8.5],
-      "323": [4, 5],
-      "041": [7.5, 9],
-      "141d": [8.5, 3.5],
-      "041d": [8.5, 4],
-      "152": [8.5, 7.5],
-      "252": [9, 7.5],
-      "334": [2, 0],
-      "052": [8.5, 8],
-      "152d": [3.5, 0.5],
-      "252d": [4, 0.5],
-      "163": [2.5, 7.5],
-      "263": [3, 7.5],
-      "363": [3, 8],
-      "045": [9.5, 0],
-      "163d": [7.5, 0.5],
-      "263d": [8, 0.5],
-      "174": [3.5, 8.5],
-      "274": [4, 8.5],
-      "374": [4, 9],
-      "056": [7.5, 5],
-      "274d": [3, 3.5],
-      "374d": [3, 4],
-      "167": [7.5, 6.5],
-      "205": [10, 8.5],
-      "305": [10, 9],
-      "005": [9.5, 9],
-      "205d": [2, 0.5],
-      "305d": [2, 1],
-      "170": [6.5, 7.5],
-      "216": [9, 9.5],
-      "316": [9, 10],
-      "016": [8.5, 10],
-      "316d": [10, 5],
-      "016d": [9.5, 5],
-      "127": [2.5, 9.5],
-      "201": [5, 7.5],
-      "327": [3, 10],
-      "027": [2.5, 10],
-      "327d": [2, 5],
-      "027d": [1.5, 5],
-      "130": [1.5, 8.5],
-      "212": [4, 6.5],
-      "330": [2, 9],
-      "030": [1.5, 9],
-      "130d": [9.5, 0.5],
-      "030d": [9.5, 1],
-      "151": [10.5, 9.5],
-      "251": [11, 9.5],
-      "324": [0, 7],
-      "051": [10.5, 10],
-      "151d": [10.5, 4.5],
-      "324d": [0, 0],
-      "162": [8.5, 10.5],
-      "262": [9, 10.5],
-      "335": [6, 8],
-      "035": [5.5, 8],
-      "162d": [3.5, 2.5],
-      "262d": [8, 2.5],
-      "173": [0.5, 9.5],
-      "273": [1, 9.5],
-      "373": [1, 10],
-      "046": [11.5, 7],
-      "046d": [11.5, 0],
-      "273d": [1, 4.5],
-      "157": [11.5, 8.5],
-      "204": [0, 5.5],
-      "304": [0, 5],
-      "057": [11.5, 9],
-      "204d": [0, 4.5],
-      "304d": [0, 6],
-      "160": [11.5, 7.5],
-      "215": [8, 6.5],
-      "315": [8, 7],
-      "015": [7.5, 7],
-      "160d": [2.5, 4.5],
-      "315d": [9, 3],
-      "171": [5.5, 10.5],
-      "271": [6, 10.5],
-      "326": [6, 5],
-      "026": [5.5, 5],
-      "326d": [7, 5],
-      "026d": [4.5, 5],
-      "137": [3.5, 6.5],
-      "202": [0, 7.5],
-      "337": [4, 7],
-      "037": [3.5, 7],
-      "202d": [9, 4.5],
-      "037d": [2.5, 3],
-      "140": [11.5, 5.5],
-      "213": [0, 8.5],
-      "313": [0, 9],
-      "040": [11.5, 5],
-      "140d": [11.5, 4.5],
-      "040d": [11.5, 6],
-      "161": [9.5, 10.5],
-      "261": [10, 10.5],
-      "325": [9, 6],
-      "025": [8.5, 6],
-      "161d": [3.5, 1.5],
-      "325d": [4, 1],
-      "172": [1.5, 10.5],
-      "272": [2, 10.5],
-      "336": [3, 6],
-      "036": [2.5, 6],
-      "036d": [7.5, 1],
-      "272d": [8, 1.5],
-      "147": [4.5, 7.5],
-      "203": [4, 3.5],
-      "303": [4, 4],
-      "047": [4.5, 8],
-      "047d": [8.5, 5],
-      "203d": [8, 4.5],
-      "150": [7.5, 3.5],
-      "214": [7, 7.5],
-      "314": [7, 8],
-      "050": [7.5, 4],
-      "150d": [3.5, 4.5],
-      "314d": [3, 5],
-      "100": [5.5, 5.5],
-      "200": [6, 5.5],
-      "300": [6, 6],
-      "000": [5.5, 6],
-      "100d": [5.5, 8.5],
-      "200d": [6, 8.5],
-      "300d": [6, 10],
-      "000d": [5.5, 10]
-    };
-    
-    function drawWallTile(ctx, col, row) {
-      var tileCode = tileMap[row][col];
-      var wt = wallTypes[tileCode];
-      if (!wt) return;
-      var solids = wt.wallSolids;
-      
-      for (var q = 0; q < 4; q++) {
-        var mask = (solids >> (q << 1)) & 3;
-        if (mask === 0) continue;
-        
-        var cornerX = col + ((q & 2) === 0 ? 1 : 0);
-        var cornerY = row + ((((q + 1) & 2) === 0 ? 0 : 1));
-        
-        var aroundCorner =
-          (wallSolidsAt(cornerX, cornerY) & 0xc0) |
-          (wallSolidsAt(cornerX - 1, cornerY) & 0x03) |
-          (wallSolidsAt(cornerX - 1, cornerY - 1) & 0x0c) |
-          (wallSolidsAt(cornerX, cornerY - 1) & 0x30);
-        aroundCorner = aroundCorner | (aroundCorner << 8);
-        
-        var startDirection = q * 2 + 1;
-        var cwSteps = 0;
-        while (cwSteps < 8 && (aroundCorner & (1 << (startDirection + cwSteps)))) {
-          cwSteps++;
-        }
-        var ccwSteps = 0;
-        while (ccwSteps < 8 && (aroundCorner & (1 << (startDirection + 7 - ccwSteps)))) {
-          ccwSteps++;
-        }
-        var hasChip = (mask === 3 && (((solids | (solids << 8)) >> ((q + 2) << 1)) & 3) === 0);
-        var solidStart, solidEnd;
-        if (cwSteps === 8) {
-          solidStart = solidEnd = 0;
-        } else {
-          solidEnd = (startDirection + cwSteps + 4) % 8;
-          solidStart = (startDirection - ccwSteps + 12) % 8;
-        }
-        var key = "" + q + solidStart + solidEnd + (hasChip ? "d" : "");
-        var coords = quadrantCoords[key];
-        if (!coords) { coords = [5.5, 5.5]; }
-        var destX = col * TILE_SIZE;
-        var destY = row * TILE_SIZE;
-        if (q === 0) {
-          destX += QUAD_SIZE;
-        } else if (q === 1) {
-          destX += QUAD_SIZE;
-          destY += QUAD_SIZE;
-        } else if (q === 2) {
-          destY += QUAD_SIZE;
-        }
-        var srcX = coords[0] * 40;
-        var srcY = coords[1] * 40;
-        ctx.drawImage(tileImage, srcX, srcY, QUAD_SIZE, QUAD_SIZE, destX, destY, QUAD_SIZE, QUAD_SIZE);
-      }
-    }
-    
-    function drawMapOnCanvas(ctx) {
-      // Clear the canvas before re-drawing the map.
-      ctx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-      
-      for (var r = 0; r < tileMap.length; r++) {
-        for (var c = 0; c < tileMap[r].length; c++) {
-          var x = c * TILE_SIZE;
-          var y = r * TILE_SIZE;
-          var tileType = tileMap[r][c];
-          if (tileType === 6) {
-            var tile = tiles[6];
-            ctx.drawImage(tileImage, tile.sx, tile.sy, TILE_SIZE, TILE_SIZE, x, y, TILE_SIZE, TILE_SIZE);
-          } else {
-            drawWallTile(ctx, c, r);
-          }
-        }
-      }
-    }
-    
-    var MAP_ROWS = tileMap.length;
-    var MAP_COLS = tileMap[0].length;
-    var MAP_WIDTH = MAP_COLS * TILE_SIZE;
-    var MAP_HEIGHT = MAP_ROWS * TILE_SIZE;
-    
-    var flag = {
-      col: 12,
-      row: 9,
-      taken: false,
-      x: 12 * TILE_SIZE + TILE_SIZE/2,
-      y: 9 * TILE_SIZE + TILE_SIZE/2,
-      carrier: null
-    };
-    
-    var PIXELS_PER_TPU = 100;
-    var baseDT = 1 / 60;
-    
-    var MAX_SPEED = 2.5;
-    var ACCELERATION = 0.025;
-    
-    var b2Vec2 = Box2D.Common.Math.b2Vec2,
-        b2BodyDef = Box2D.Dynamics.b2BodyDef,
-        b2Body = Box2D.Dynamics.b2Body,
-        b2FixtureDef = Box2D.Dynamics.b2FixtureDef,
-        b2World = Box2D.Dynamics.b2World,
-        b2CircleShape = Box2D.Collision.Shapes.b2CircleShape;
-    
-    var world = new b2World(new b2Vec2(0, 0), true);
-    
-    function disableCollisions(body) {
-      var fixture = body.GetFixtureList();
-      while (fixture) {
-        fixture.SetSensor(true);
-        fixture = fixture.GetNext();
-      }
-    }
-    function enableCollisions(body) {
-      var fixture = body.GetFixtureList();
-      while (fixture) {
-        fixture.SetSensor(false);
-        fixture = fixture.GetNext();
-      }
-    }
-    
-    var ballIdCounter = 1;
-    function spawnBall(cameraFollow, canControl, color, x, y) {
-      var bodyDef = new b2BodyDef();
-      bodyDef.type = b2Body.b2_dynamicBody;
-      bodyDef.bullet = true;
-      bodyDef.position.Set(x, y);
-      if (canControl) {
-        bodyDef.linearDamping = 0.5;
-        bodyDef.angularDamping = 0.5;
-      }
-      var ballBody = world.CreateBody(bodyDef);
-      
-      var fixDef = new b2FixtureDef();
-      fixDef.shape = new b2CircleShape(19 / PIXELS_PER_TPU);
-      fixDef.density = 1;
-      fixDef.friction = 0.5;
-      fixDef.restitution = 0.2;
-      ballBody.CreateFixture(fixDef);
-      
-      var data = {
-        id: ballIdCounter++,
-        controlled: canControl,
-        hasFlag: false,
-        team: String(color).toLowerCase(),
-        startPos: new b2Vec2(x, y),
-        canMove: true
-      };
-      ballBody.SetUserData(data);
-      
-      var textureRect;
-      if (data.team === 'red') {
-        textureRect = new PIXI.Rectangle(560, 0, 40, 40);
-      } else if (data.team === 'blue') {
-        textureRect = new PIXI.Rectangle(600, 0, 40, 40);
-      } else {
-        textureRect = new PIXI.Rectangle(560, 0, 40, 40);
-      }
-      
-      var baseTexture = PIXI.BaseTexture.from("https://static.koalabeast.com" + currentTexturePack.tiles);
-      var ballTexture = new PIXI.Texture(baseTexture, textureRect);
-      var ballSprite = new PIXI.Sprite(ballTexture);
-      ballSprite.anchor.set(0.5);
-      ballSprite.x = x * PIXELS_PER_TPU;
-      ballSprite.y = y * PIXELS_PER_TPU;
-      
-      worldContainer.addChild(ballSprite);
-      data.sprite = ballSprite;
-      
-      if (cameraFollow) { window.cameraFollowBall = ballBody; }
-      
-      return ballBody;
-    }
-    
-    var b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape;
-    for (var row = 0; row < tileMap.length; row++) {
-      for (var col = 0; col < tileMap[row].length; col++) {
-        if (tileMap[row][col] === 1) {
-          var wallBodyDef = new b2BodyDef();
-          wallBodyDef.type = b2Body.b2_staticBody;
-          wallBodyDef.position.Set(
-            (col * TILE_SIZE + TILE_SIZE / 2) / PIXELS_PER_TPU,
-            (row * TILE_SIZE + TILE_SIZE / 2) / PIXELS_PER_TPU
-          );
-          var wallBody = world.CreateBody(wallBodyDef);
-          var wallFixDef = new b2FixtureDef();
-          wallFixDef.shape = new b2PolygonShape();
-          wallFixDef.shape.SetAsBox((TILE_SIZE / 2) / PIXELS_PER_TPU, (TILE_SIZE / 2) / PIXELS_PER_TPU);
-          wallBody.CreateFixture(wallFixDef);
-        }
-      }
-    }
-    
-    var listener = new Box2D.Dynamics.b2ContactListener();
-    listener.BeginContact = function(contact) {
-      var fixtureA = contact.GetFixtureA();
-      var fixtureB = contact.GetFixtureB();
-      var bodyA = fixtureA.GetBody();
-      var bodyB = fixtureB.GetBody();
-      var dataA = bodyA.GetUserData();
-      var dataB = bodyB.GetUserData();
-      
-      var worldManifold = new Box2D.Collision.b2WorldManifold();
-      contact.GetWorldManifold(worldManifold);
-      var cp = worldManifold.m_points[0];
-      var contactPoint = new b2Vec2(cp.x, cp.y);
-      
-if (dataA && dataB && dataA.hasFlag !== undefined && dataB.hasFlag !== undefined) {
-  if (dataA.team !== dataB.team) {
-    if (dataA.hasFlag && !dataB.hasFlag) {
-      if (!dataB.canMove) return;
-      dataA.canMove = false;
-      var audio = new Audio("friendlydrop.mp3");
-      audio.play();
-      
-      createExplosionAt(contactPoint, bodyA);
-      disableCollisions(bodyA);
-      if (dataA.sprite) { dataA.sprite.visible = false; }
-      
-      dataA.hasFlag = false;
-      dataB.hasFlag = true;
-      flag.carrier = bodyB;
-      
-      console.log("Flag stolen: " + dataB.team + " team now has the flag.");
-      
-      if (!dataA.isRespawning) {
-        dataA.isRespawning = true;
-        setTimeout(function(){
-          bodyA.SetPosition(dataA.startPos);
-          bodyA.SetLinearVelocity(new b2Vec2(0, 0));
-          if (dataA.sprite) { dataA.sprite.visible = true; }
-          enableCollisions(bodyA);
-          dataA.isRespawning = false;
-          dataA.canMove = true;
-        }, 3000);
-      }
-    } else if (dataB.hasFlag && !dataA.hasFlag) {
-      if (!dataA.canMove) return;
-      dataB.canMove = false;
-      var audio = new Audio("drop.mp3");
-      audio.play();
-      
-      createExplosionAt(contactPoint, bodyB);
-      disableCollisions(bodyB);
-      if (dataB.sprite) { dataB.sprite.visible = false; }
-      
-      dataB.hasFlag = false;
-      dataA.hasFlag = true;
-      flag.carrier = bodyA;
-      
-      console.log("Flag stolen: " + dataA.team + " team now has the flag.");
-      
-      if (!dataB.isRespawning) {
-        dataB.isRespawning = true;
-        setTimeout(function(){
-          bodyB.SetPosition(dataB.startPos);
-          bodyB.SetLinearVelocity(new b2Vec2(0, 0));
-          if (dataB.sprite) { dataB.sprite.visible = true; }
-          enableCollisions(bodyB);
-          dataB.isRespawning = false;
-          dataB.canMove = true;
-        }, 5000);
-      }
-    }
-  }
-}
-
-      if ((dataA && dataA.controlled) || (dataB && dataB.controlled)) {
-        var controlledBody = dataA && dataA.controlled ? bodyA : bodyB;
-        var tangent = new b2Vec2(-worldManifold.m_normal.y, worldManifold.m_normal.x);
-        var velocity = controlledBody.GetLinearVelocity();
-        var dot = velocity.x * tangent.x + velocity.y * tangent.y;
-        var sign = (dot >= 0) ? 1 : -1;
-        var speed = velocity.Length();
-        var ballRadius = 19 / PIXELS_PER_TPU;
-        var expectedAngularVel = sign * (speed / ballRadius);
-        var currentAngularVel = controlledBody.GetAngularVelocity();
-        var adjustmentFactor = 0.11;
-        var newAngularVel = currentAngularVel + adjustmentFactor * (expectedAngularVel - currentAngularVel);
-        controlledBody.SetAngularVelocity(newAngularVel);
-      }
-    };
-    world.SetContactListener(listener);
-    
-    var app = new PIXI.Application({
-      width: 1280,
-      height: 800,
-      transparent: true,
-      resolution: window.devicePixelRatio || 1,
-      autoDensity: true,
-    });
-    document.body.appendChild(app.view);
-    
-    var worldContainer = new PIXI.Container();
-    app.stage.addChild(worldContainer);
-    
-    var mapCanvas = document.createElement('canvas');
-    mapCanvas.width = MAP_WIDTH;
-    mapCanvas.height = MAP_HEIGHT;
-    var mapCtx = mapCanvas.getContext('2d');
-    
-    var flagSprite, miniFlagSprite, mapSprite;
-    
-    var tileImage = new Image();
-    tileImage.crossOrigin = "anonymous";
-    tileImage.src = "https://static.koalabeast.com" + currentTexturePack.tiles;
-    tileImage.onload = function() {
-      drawMapOnCanvas(mapCtx);
-      // Create a new BaseTexture from the canvas so that updates are applied.
-      mapSprite = new PIXI.Sprite(new PIXI.Texture(new PIXI.BaseTexture(mapCanvas)));
-      worldContainer.addChildAt(mapSprite, 0);
-      
-      var baseTextureForFlag = PIXI.BaseTexture.from("https://static.koalabeast.com" + currentTexturePack.tiles);
-      // Initially, flag is not taken so use the untaken flag rectangle.
-      var flagTexture = new PIXI.Texture(baseTextureForFlag, new PIXI.Rectangle(520, 40, 40, 40));
-      flagSprite = new PIXI.Sprite(flagTexture);
-      flagSprite.anchor.set(0.5);
-      flagSprite.x = flag.x;
-      flagSprite.y = flag.y;
-      worldContainer.addChild(flagSprite);
-      
-      var miniFlagTexture = new PIXI.Texture(baseTextureForFlag, new PIXI.Rectangle(520, 40, 40, 40));
-      miniFlagSprite = new PIXI.Sprite(miniFlagTexture);
-      miniFlagSprite.anchor.set(0.5);
-      miniFlagSprite.scale.set(0.5);
-      miniFlagSprite.visible = false;
-      worldContainer.addChild(miniFlagSprite);
-    };
-    
-    var players = [];
-    players.push(spawnBall(
-      true,
-      true,
-      'red', 
-      (2 * TILE_SIZE - 20) / PIXELS_PER_TPU, 
-      (18 * TILE_SIZE + 20) / PIXELS_PER_TPU
-    ));
-
- players.push(spawnBall(
-      false,
-      false,
-      'blue', 
-      (2 * TILE_SIZE - 20) / PIXELS_PER_TPU, 
-      (18 * TILE_SIZE + 20) / PIXELS_PER_TPU
-    ));
-    
-    
-    var keys = {};
-    window.addEventListener("keydown", function(e) {
-      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].indexOf(e.key) !== -1) {
-        e.preventDefault();
-      }
-      keys[e.key] = true;
-    });
-    window.addEventListener("keyup", function(e) {
-      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].indexOf(e.key) !== -1) {
-        e.preventDefault();
-      }
-      keys[e.key] = false;
-    });
-    
-    app.ticker.add(function(delta) {
-      var controlledPlayer = players.find(function(p) {
-        return p.GetUserData().controlled;
-      });
-      if (controlledPlayer) {
-        var data = controlledPlayer.GetUserData();
-        if (data.canMove !== false) {
-          var currentVel = controlledPlayer.GetLinearVelocity();
-          var newVel = new b2Vec2(currentVel.x, currentVel.y);
-          if (keys["ArrowLeft"] || keys["a"] || keys["A"]) {
-            if (newVel.x > -MAX_SPEED) newVel.x -= ACCELERATION;
-          }
-          if (keys["ArrowRight"] || keys["d"] || keys["D"]) {
-            if (newVel.x < MAX_SPEED) newVel.x += ACCELERATION;
-          }
-          if (keys["ArrowUp"] || keys["w"] || keys["W"]) {
-            if (newVel.y > -MAX_SPEED) newVel.y -= ACCELERATION;
-          }
-          if (keys["ArrowDown"] || keys["s"] || keys["S"]) {
-            if (newVel.y < MAX_SPEED) newVel.y += ACCELERATION;
-          }
-          controlledPlayer.SetLinearVelocity(newVel);
-          controlledPlayer.SetAwake(true);
-        } else {
-          controlledPlayer.SetLinearVelocity(new b2Vec2(0,0));
-        }
-      }
-      
-      world.Step(baseDT, 8, 3);
-      world.ClearForces();
-      
-      players.forEach(function(player) {
-        var pos = player.GetPosition();
-        var sprite = player.GetUserData().sprite;
-        sprite.x = pos.x * PIXELS_PER_TPU;
-        sprite.y = pos.y * PIXELS_PER_TPU;
-        sprite.rotation = player.GetAngle();
-      });
-      
-      if (controlledPlayer) {
-        var cs = controlledPlayer.GetUserData().sprite;
-        worldContainer.x = app.screen.width / 2 - cs.x;
-        worldContainer.y = app.screen.height / 2 - cs.y;
-      }
-      
-      if (!flag.taken && flagSprite) {
-        var pickupDistance = 15 + 19;
-        players.forEach(function(player) {
-          var pos = player.GetPosition();
-          var x = pos.x * PIXELS_PER_TPU;
-          var y = pos.y * PIXELS_PER_TPU;
-          var dx = x - flag.x;
-          var dy = y - flag.y;
-          if (Math.sqrt(dx*dx + dy*dy) < pickupDistance) {
-            flag.taken = true;
-            player.GetUserData().hasFlag = true;
-            flag.carrier = player;
-            // Change flag texture to show it’s taken.
-            var baseTexture = PIXI.BaseTexture.from("https://static.koalabeast.com" + currentTexturePack.tiles);
-            flagSprite.texture = new PIXI.Texture(baseTexture, new PIXI.Rectangle(520, 80, 40, 40));
-            console.log(player.GetUserData().team + " team picked up the flag from the ground.");
-            var audio = new Audio(player.GetUserData().team === 'red' ? "friendlyalert.mp3" : "alert.mp3");
-            audio.volume = 0.5;
-            audio.play();
-          }
-        });
-      }
-      
-      if (miniFlagSprite) {
-        if (flag.carrier) {
-          miniFlagSprite.visible = true;
-          var carrierSprite = flag.carrier.GetUserData().sprite;
-          miniFlagSprite.x = carrierSprite.x;
-          miniFlagSprite.y = carrierSprite.y - carrierSprite.height/2 - 10;
-        } else {
-          miniFlagSprite.visible = false;
-        }
-      }
-    });
-    
-    function createExplosionAt(position, dyingBody) {
-      var blastRadius = 0.4 * 7;
-      var mass = 0.11341149479459152;
-      var impulseMultiplier = 1.25;
-      var body = world.GetBodyList();
-      while (body) {
-        var data = body.GetUserData();
-        if (data && data.id && body !== dyingBody) {
-          var worldCenter = body.GetWorldCenter();
-          var diff = new Box2D.Common.Math.b2Vec2(0, 0);
-          diff.Add(worldCenter);
-          diff.Subtract(position);
-          var distance = diff.Length();
-          if (distance <= blastRadius && distance > 0) {
-            var s = (impulseMultiplier * mass) / (distance * distance);
-            diff.NegativeSelf();
-            diff.Multiply(s);
-            body.ApplyImpulse(diff, worldCenter);
-          }
-        }
-        body = body.GetNext();
-      }
-    }
-  </script>
+  <script src="tagpro.js"></script>
+  <script src="bot.js"></script>
 </body>
 </html>
