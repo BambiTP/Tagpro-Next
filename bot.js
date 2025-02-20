@@ -1,74 +1,92 @@
 const PIXELS_PER_TPU = 100; // Scale factor for game units to pixels
-let bot1Enabled = false; // Toggle bot on/off
+let bot3Enabled = true; // Toggle for this specific bot
 
-function sendKey(direction, duration) {
-    if (!bot1Enabled) return;
+// Function to simulate pressing a movement key for a duration (500ms)
+function sendKey(direction) {
+    if (!bot3Enabled) return; // Prevent movement if the bot is disabled
 
     const bot = balls[1];
 
+    // Only act if the key isn't already active
     if (!bot[direction]) {
-        bot[direction] = true;
-        console.log(`[sendKey] ${direction} pressed for ${duration}ms`);
-
-        setTimeout(() => {
-            bot[direction] = false;
-            console.log(`[sendKey] ${direction} released`);
-        }, duration);
+        // Set opposing key to false and current key to true
+        if (direction === 'up') {
+            bot.down = false;
+            bot.up = true;
+        } else if (direction === 'down') {
+            bot.up = false;
+            bot.down = true;
+        } else if (direction === 'right') {
+            bot.left = false;
+            bot.right = true;
+        } else if (direction === 'left') {
+            bot.right = false;
+            bot.left = true;
+        } else {
+            // For any other direction, simply set it to true.
+            bot[direction] = true;
+        }
     }
 }
 
+// botMove translates a "seek" vector into simulated key presses.
 function botMove(seek) {
-    if (!bot1Enabled) return;
+    if (!bot3Enabled) return; // Prevent movement if the bot is disabled
 
-    var threshold = 5; // Minimal difference in pixels
+    const threshold = 5; // Minimal difference in pixels
     if (Math.abs(seek.x) > threshold) {
-        sendKey(seek.x > 0 ? "right" : "left", 500);
+        sendKey(seek.x > 0 ? "right" : "left");
     }
     if (Math.abs(seek.y) > threshold) {
-        sendKey(seek.y > 0 ? "down" : "up", 500);
+        sendKey(seek.y > 0 ? "down" : "up");
     }
 }
 
+// runBlueBot computes a desired destination based on simple logic:
+// - If the bot has the flag, head for the safe base.
+// - Else if the enemy (controlledBall) has the flag, chase the enemy.
+// - Otherwise, go for the flag on the ground.
 function runBlueBot() {
-    if (!bot1Enabled) return;
+    if (!bot3Enabled) return; // Prevent running the bot if disabled
 
-    var botData = balls[1].hasFlag;
-    var pos = balls[1].GetPosition();
-    var botPos = { x: pos.x * PIXELS_PER_TPU, y: pos.y * PIXELS_PER_TPU };
-    var vel = balls[1].GetLinearVelocity();
-    var botVel = { x: vel.x * PIXELS_PER_TPU, y: vel.y * PIXELS_PER_TPU };
+    const botData = balls[1].hasFlag;
+    const pos = balls[1].GetPosition();
+    const botPos = { x: pos.x * PIXELS_PER_TPU, y: pos.y * PIXELS_PER_TPU };
+    const vel = balls[1].GetLinearVelocity();
+    const botVel = { x: vel.x * PIXELS_PER_TPU, y: vel.y * PIXELS_PER_TPU };
 
-    var predictedBotPos = { x: botPos.x + botVel.x, y: botPos.y + botVel.y };
+    // A rough predicted position (current position + velocity)
+    const predictedBotPos = { x: botPos.x + botVel.x, y: botPos.y + botVel.y };
 
-    var destination;
+    let destination;
     if (balls[0].hasFlag) {
-        var enemyPos = balls[0].GetPosition();
-        var enemyVel = balls[0].GetLinearVelocity();
+        // If the enemy has the flag, chase the enemy.
+        const enemyPos = balls[0].GetPosition();
+        const enemyVel = balls[0].GetLinearVelocity();
         destination = { 
             x: enemyPos.x * PIXELS_PER_TPU + enemyVel.x * PIXELS_PER_TPU, 
             y: enemyPos.y * PIXELS_PER_TPU + enemyVel.y * PIXELS_PER_TPU 
         };
 
-        var seek = {
+        const seek = {
             x: destination.x - predictedBotPos.x,
             y: destination.y - predictedBotPos.y
         };
+
         botMove(seek);
     }
 }
 
 // Run the blue bot AI every 100ms.
-let botInterval = setInterval(runBlueBot, 100);
+let bot3Interval = setInterval(runBlueBot, 100);
 
 // Functions to enable or disable the bot
-function enableBot1() {
-bot2Enabled=false;
-bot3Enabled=false;
-    bot1Enabled = true;
-    console.log("Bot enabled.");
+function enableBot3() {
+    bot3Enabled = true;
+    console.log("Bot 3 enabled.");
 }
 
-function disableBot1() {
-    bot1Enabled = false;
-    console.log("Bot disabled.");
+function disableBot3() {
+    bot3Enabled = false;
+    console.log("Bot 3 disabled.");
 }
