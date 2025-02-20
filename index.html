@@ -28,6 +28,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      flex-direction: column;
     }
     #modalParent {
       display: flex;
@@ -95,17 +96,15 @@
     #closeModal {
       margin-top: 15px;
     }
-    #warningContainer {
-      margin-top: 20px;
-      text-align: center;
-      max-width: 600px;
-    }
     #warning {
       color: red;
       font-size: 12px;
       border: 1px solid red;
       padding: 10px;
       background-color: #ffe6e6;
+      margin-top: 20px;
+      text-align: center;
+      max-width: 600px;
     }
   </style>
 </head>
@@ -157,10 +156,10 @@
         </div>
       </div>
     </div>
-  </div>
-  <div id="warningContainer">
     <div id="warning">
-      <strong>Warning:</strong> Any attempt to run a bot (or any similar derivative as determined by the mod team) on TagPro servers or otherwise on the TagPro website is subject to account deletion. Any attempt to make your project public or set it up on other servers than TagPro for general or public use or to offer it as an alternative to the TagPro website must be done without any TagPro assets including the name, textures, sounds, flairs, etc.
+      <strong>Warning:</strong><br><br>
+      Any attempt to run a bot (or any similar derivative as determined by the mod team) on TagPro servers or otherwise on the TagPro website is subject to account deletion.<br><br>
+      Any attempt to make your project public or set it up on other servers than TagPro for general or public use or to offer it as an alternative to the TagPro website must be done without any TagPro assets including the name, textures, sounds, flairs, etc.
     </div>
   </div>
   <script src="pixi.min.js"></script>
