@@ -104,6 +104,8 @@ let botInterval = setInterval(() => {
 
 // Functions to enable or disable the bot
 function enableBot2() {
+bot1Enabled = false;
+bot3Enabled = false;
   bot2Enabled = true;
   console.log("Bot 2 enabled.");
 }
