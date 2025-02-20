@@ -1,5 +1,5 @@
 const PIXELS_PER_TPU = 100; // Scale factor for game units to pixels
-let bot1Enabled = true; // Toggle bot on/off
+let bot1Enabled = false; // Toggle bot on/off
 
 function sendKey(direction, duration) {
     if (!bot1Enabled) return;
@@ -62,6 +62,8 @@ let botInterval = setInterval(runBlueBot, 100);
 
 // Functions to enable or disable the bot
 function enableBot1() {
+bot2Enabled=false;
+bot3Enabled=false;
     bot1Enabled = true;
     console.log("Bot enabled.");
 }
