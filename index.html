@@ -2,11 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- Prevent zooming -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Dynamic TagPro Game</title>
   <style>
-    /* Global Styles */
     html, body {
       height: 100%;
       margin: 0;
@@ -18,8 +16,6 @@
       justify-content: center;
       align-items: center;
     }
-    
-    /* Modal overlay */
     #textureModal {
       position: fixed;
       top: 0;
@@ -32,24 +28,18 @@
       justify-content: center;
       align-items: center;
     }
-    
-    /* Parent container: holds customization box and flair container */
     #modalParent {
       display: flex;
       gap: 20px;
       align-items: flex-start;
     }
-    
-    /* Customization white box */
     #customizationBox {
       background: white;
       padding: 20px;
       border-radius: 5px;
       box-sizing: border-box;
-      margin-top: 30px; /* Moved down 20px */
+      margin-top: 30px;
     }
-    
-    /* Styling for labels and inputs within the customization box */
     #customizationBox label {
       display: inline-block;
       text-align: right;
@@ -59,19 +49,14 @@
     #customizationBox select {
       margin-bottom: 5px;
     }
-    
-    /* Flair container (separate from the white box) */
     #flairContainer {
-      margin-top: -60px; /* Moved up 10px */
+      margin-top: -60px;
     }
-    
     #flairContainer h3 {
       color: white;
       text-align: center;
       margin-bottom: 10px;
     }
-    
-    /* Grid for flairs: 15 columns; will create 11 rows when 165 icons are added */
     #flairSelectContainer {
       display: grid;
       grid-template-columns: repeat(15, 31px);
@@ -82,8 +67,6 @@
       border: 1px solid #ccc;
       box-sizing: border-box;
     }
-    
-    /* Each flair selection box */
     .flairIcon {
       width: 31px;
       height: 31px;
@@ -96,36 +79,34 @@
       justify-content: center;
       transition: box-shadow 0.2s ease;
     }
-    
     .flairIcon:hover {
       box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
     }
-    
     .flairIcon.selected {
       border-color: blue;
     }
-    
-    /* Inner element for flair image (native 16x16) */
     .flairIconInner {
       width: 16px;
       height: 16px;
       background-repeat: no-repeat;
       transform: translateY(3px);
     }
-    
-    /* Optional: Style the close button */
     #closeModal {
       margin-top: 15px;
+    }
+    #warning {
+      color: red;
+      font-size: 12px;
+      margin-top: 15px;
+      border: 1px solid red;
+      padding: 10px;
+      background-color: #ffe6e6;
     }
   </style>
 </head>
 <body>
-  <!-- Modal overlay -->
   <div id="textureModal">
-    <!-- Parent container holds both the white customization box and the flair grid -->
     <div id="modalParent">
-      
-      <!-- Customization options container (white box) -->
       <div id="customizationBox">
         <h2>Customize Your Ball</h2>
         <div id="textureSection">
@@ -145,7 +126,7 @@
             <label for="authCheckbox">Auth:</label>
             <input type="checkbox" id="authCheckbox">
           </div>
- <div>
+          <div>
             <label for="botSelector">Select Bot:</label>
             <select id="botSelector">
               <option value="1">Easy Bot</option>
@@ -154,14 +135,14 @@
             </select>
           </div>
         </div>
+        <div id="warning">
+          <strong>Warning:</strong> Any attempt to run a bot (or any similar derivative as determined by the mod team) on TagPro servers or otherwise on the TagPro website is subject to account deletion. Any attempt to make your project public or set it up on other servers than TagPro for general or public use or to offer it as an alternative to the TagPro website must be done without any TagPro assets including the name, textures, sounds, flairs, etc.
+        </div>
         <button id="closeModal">Close</button>
       </div>
-      
-      <!-- Flair grid container (separate from the white box) -->
       <div id="flairContainer">
         <h3>Flair</h3>
         <div id="flairSelectContainer">
-          <!-- Sample flair icons. Repeat/add until you have a 15 x 11 (165 icons) grid. -->
           <div class="flairIcon">
             <div class="flairIconInner" style="background-image: url('flair1.png');"></div>
           </div>
@@ -171,14 +152,10 @@
           <div class="flairIcon">
             <div class="flairIconInner" style="background-image: url('flair3.png');"></div>
           </div>
-          <!-- Add additional flair icons here -->
         </div>
       </div>
-      
     </div>
   </div>
-  
-  <!-- External libraries -->
   <script src="pixi.min.js"></script>
   <script src="Box2d.min.js"></script>
   <script src="tagpro.js"></script>
