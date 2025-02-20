@@ -241,6 +241,18 @@ function disableCurrentBot() {
   activeBot = 0;
 }
 
+   function enableBot(botNumber) {
+      console.log(`Enabling bot ${botNumber}`);
+      // Here you can add your logic to enable the corresponding bot.
+      // Example: Call whatever function initializes the selected bot.
+    }
+
+    // Bot selector event listener
+    document.getElementById("botSelector").addEventListener("change", function () {
+      const selectedBot = parseInt(this.value, 10);
+      enableBot(selectedBot);
+    });
+
 // Example usage:
 // enableBot(1); // Enables bot 1
 // enableBot(2); // Switches to bot 2
