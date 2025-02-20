@@ -86,8 +86,8 @@ function botMoveBot2(seek) {
 // Clamps a point to an allowed area.
 function clampToAllowedArea(point) {
   const allowedCenter = { x: 12 * 40 + 40 / 2, y: 9 * 40 + 40 / 2 };
-  const allowedWidth = 21 * 40 + 15;
-  const allowedHeight = 15 * 40 + 15;
+  const allowedWidth = 21 * 40 + 20;
+  const allowedHeight = 15 * 40 + 20;
   const halfWidth = allowedWidth / 2;
   const halfHeight = allowedHeight / 2;
   
