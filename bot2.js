@@ -1,5 +1,5 @@
 const PIXELS_PER_TPU = 100; // Scale factor for game units to pixels
-let bot2Enabled = true; // Toggle bot on/off
+let bot2Enabled = false; // Toggle bot on/off
 
 // Function to simulate pressing a movement key for a duration (e.g., 400ms)
 function sendKey(direction, duration) {
