@@ -82,6 +82,8 @@ let bot3Interval = setInterval(runBlueBot, 100);
 
 // Functions to enable or disable the bot
 function enableBot3() {
+    bot1Enabled = false;
+bot2Enabled= false;
     bot3Enabled = true;
     console.log("Bot 3 enabled.");
 }
