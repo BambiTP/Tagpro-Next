@@ -559,7 +559,7 @@ nameColor = data.auth ? 0xBFFF00 : 0xFFFFFF;
   const fixDef = new b2FixtureDef();
   fixDef.shape = new b2CircleShape(0.19);
   fixDef.density = 1;
-  fixDef.friction = 1.5;
+  fixDef.friction = .5;
   fixDef.restitution = 0.2;
   ballBody.CreateFixture(fixDef);
   ballBody.ResetMassData();
