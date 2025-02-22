@@ -899,98 +899,109 @@ nameColor = data.auth ? 0xBFFF00 : 0xFFFFFF;
 
   // ------------------------------------------------------------------
   // Main ticker loop
-  app.ticker.add(delta => {
-    // Process input for each player
-    players.forEach(player => {
-      const data = player.GetUserData();
-      if (data.canMove) {
-        const currentVel = player.GetLinearVelocity();
-        const newVel = new b2Vec2(currentVel.x, currentVel.y);
-        if (data.controlled) {
-          if (keys["ArrowLeft"] || keys["a"] || keys["A"]) {
-            if (newVel.x > -config.maxSpeed) newVel.x -= config.acceleration;
-          }
-          if (keys["ArrowRight"] || keys["d"] || keys["D"]) {
-            if (newVel.x < config.maxSpeed) newVel.x += config.acceleration;
-          }
-          if (keys["ArrowUp"] || keys["w"] || keys["W"]) {
-            if (newVel.y > -config.maxSpeed) newVel.y -= config.acceleration;
-          }
-          if (keys["ArrowDown"] || keys["s"] || keys["S"]) {
-            if (newVel.y < config.maxSpeed) newVel.y += config.acceleration;
-          }
+ let accumulator = 0;
+
+app.ticker.add((delta) => {
+  // Convert elapsed time from milliseconds to seconds.
+  const dt = app.ticker.deltaMS / 1000;
+  accumulator += dt;
+
+  // Process input for each player.
+  players.forEach(player => {
+    const data = player.GetUserData();
+    if (data.canMove) {
+      const currentVel = player.GetLinearVelocity();
+      const newVel = new b2Vec2(currentVel.x, currentVel.y);
+      if (data.controlled) {
+        if (keys["ArrowLeft"] || keys["a"] || keys["A"]) {
+          if (newVel.x > -config.maxSpeed) newVel.x -= config.acceleration;
         }
-        if (player.left)  { if (newVel.x > -config.maxSpeed) newVel.x -= config.acceleration; }
-        if (player.right) { if (newVel.x < config.maxSpeed) newVel.x += config.acceleration; }
-        if (player.up)    { if (newVel.y > -config.maxSpeed) newVel.y -= config.acceleration; }
-        if (player.down)  { if (newVel.y < config.maxSpeed) newVel.y += config.acceleration; }
-        player.SetLinearVelocity(newVel);
-        player.SetAwake(true);
-      } else {
-        player.SetLinearVelocity(new b2Vec2(0, 0));
-      }
-    });
-
-    // Step physics world
-    world.Step(config.baseDT, 8, 3);
-    world.ClearForces();
-
-    // Update each player's ball sprite position from physics bodies
-    players.forEach(player => {
-      const pos = player.GetPosition();
-      const sprite = player.GetUserData().sprite;
-      sprite.x = pos.x * config.pixPerTPU;
-      sprite.y = pos.y * config.pixPerTPU;
-      sprite.rotation = player.GetAngle();
-    });
-
-    // Update the UI for every ball
-    updatePlayerUI();
-
-    // Center the camera on the controlled player's ball sprite
-    const controlledPlayer = players.find(p => p.GetUserData().controlled);
-    if (controlledPlayer) {
-      const cs = controlledPlayer.GetUserData().sprite;
-      worldContainer.x = app.screen.width / 2 - cs.x;
-      worldContainer.y = app.screen.height / 2 - cs.y;
-    }
-
-    // Flag pickup logic
-    if (!flag.taken && flagSprite) {
-      const pickupDistance = 15 + 19;
-      players.forEach(player => {
-        const pos = player.GetPosition();
-        const x = pos.x * config.pixPerTPU;
-        const y = pos.y * config.pixPerTPU;
-        const dx = x - flag.x;
-        const dy = y - flag.y;
-        if (Math.sqrt(dx * dx + dy * dy) < pickupDistance) {
-          flag.taken = true;
-          player.GetUserData().hasFlag = true;
-          player.hasFlag = true;
-          flag.carrier = player;
-          const baseTexture = PIXI.BaseTexture.from("https://static.koalabeast.com" + currentTexturePack.tiles);
-          flagSprite.texture = new PIXI.Texture(baseTexture, new PIXI.Rectangle(520, 80, 40, 40));
-          console.log(player.GetUserData().team + " team picked up the flag from the ground.");
-          const audio = new Audio(player.GetUserData().team === 'red' ? "friendlyalert.mp3" : "alert.mp3");
-          audio.volume = 0.5;
-          audio.play();
+        if (keys["ArrowRight"] || keys["d"] || keys["D"]) {
+          if (newVel.x < config.maxSpeed) newVel.x += config.acceleration;
         }
-      });
-    }
-
-    // Update mini flag sprite (follows the carrier’s ball sprite)
-    if (miniFlagSprite) {
-      if (flag.carrier) {
-        miniFlagSprite.visible = true;
-        const carrierSprite = flag.carrier.GetUserData().sprite;
-        miniFlagSprite.x = carrierSprite.x;
-        miniFlagSprite.y = carrierSprite.y - carrierSprite.height / 2 - 10;
-      } else {
-        miniFlagSprite.visible = false;
+        if (keys["ArrowUp"] || keys["w"] || keys["W"]) {
+          if (newVel.y > -config.maxSpeed) newVel.y -= config.acceleration;
+        }
+        if (keys["ArrowDown"] || keys["s"] || keys["S"]) {
+          if (newVel.y < config.maxSpeed) newVel.y += config.acceleration;
+        }
       }
+      // Additional directional properties, if any.
+      if (player.left)  { if (newVel.x > -config.maxSpeed) newVel.x -= config.acceleration; }
+      if (player.right) { if (newVel.x < config.maxSpeed) newVel.x += config.acceleration; }
+      if (player.up)    { if (newVel.y > -config.maxSpeed) newVel.y -= config.acceleration; }
+      if (player.down)  { if (newVel.y < config.maxSpeed) newVel.y += config.acceleration; }
+      player.SetLinearVelocity(newVel);
+      player.SetAwake(true);
+    } else {
+      player.SetLinearVelocity(new b2Vec2(0, 0));
     }
   });
+
+  // Step the physics world in fixed increments.
+  while (accumulator >= config.baseDT) {
+    world.Step(config.baseDT, 8, 3);
+    accumulator -= config.baseDT;
+  }
+  world.ClearForces();
+
+  // Update each player's sprite position based on their physics body.
+  players.forEach(player => {
+    const pos = player.GetPosition();
+    const sprite = player.GetUserData().sprite;
+    sprite.x = pos.x * config.pixPerTPU;
+    sprite.y = pos.y * config.pixPerTPU;
+    sprite.rotation = player.GetAngle();
+  });
+
+  // Update the UI elements (name, degree, flair) for each player.
+  updatePlayerUI();
+
+  // Center the camera on the controlled player's ball.
+  const controlledPlayer = players.find(p => p.GetUserData().controlled);
+  if (controlledPlayer) {
+    const cs = controlledPlayer.GetUserData().sprite;
+    worldContainer.x = app.screen.width / 2 - cs.x;
+    worldContainer.y = app.screen.height / 2 - cs.y;
+  }
+
+  // Flag pickup logic.
+  if (!flag.taken && flagSprite) {
+    const pickupDistance = 15 + 19;
+    players.forEach(player => {
+      const pos = player.GetPosition();
+      const x = pos.x * config.pixPerTPU;
+      const y = pos.y * config.pixPerTPU;
+      const dx = x - flag.x;
+      const dy = y - flag.y;
+      if (Math.sqrt(dx * dx + dy * dy) < pickupDistance) {
+        flag.taken = true;
+        player.GetUserData().hasFlag = true;
+        player.hasFlag = true;
+        flag.carrier = player;
+        const baseTexture = PIXI.BaseTexture.from("https://static.koalabeast.com" + currentTexturePack.tiles);
+        flagSprite.texture = new PIXI.Texture(baseTexture, new PIXI.Rectangle(520, 80, 40, 40));
+        console.log(player.GetUserData().team + " team picked up the flag from the ground.");
+        const audio = new Audio(player.GetUserData().team === 'red' ? "friendlyalert.mp3" : "alert.mp3");
+        audio.volume = 0.5;
+        audio.play();
+      }
+    });
+  }
+
+  // Update the mini flag sprite so it follows the flag carrier.
+  if (miniFlagSprite) {
+    if (flag.carrier) {
+      miniFlagSprite.visible = true;
+      const carrierSprite = flag.carrier.GetUserData().sprite;
+      miniFlagSprite.x = carrierSprite.x;
+      miniFlagSprite.y = carrierSprite.y - carrierSprite.height / 2 - 10;
+    } else {
+      miniFlagSprite.visible = false;
+    }
+  }
+});
+
   // ------------------------------------------------------------------
 
   window.balls = players;
