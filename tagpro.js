@@ -900,10 +900,11 @@ nameColor = data.auth ? 0xBFFF00 : 0xFFFFFF;
   // ------------------------------------------------------------------
   // Main ticker loop
  let accumulator = 0;
+let accumulator = 0;
 
-app.ticker.add((delta) => {
-  // Convert elapsed time from milliseconds to seconds.
-  const dt = app.ticker.deltaMS / 1000;
+app.ticker.add(() => {
+  // Clamp dt to a maximum to prevent huge jumps (e.g., 50ms).
+  const dt = Math.min(app.ticker.deltaMS / 1000, 0.05);
   accumulator += dt;
 
   // Process input for each player.
@@ -926,7 +927,7 @@ app.ticker.add((delta) => {
           if (newVel.y < config.maxSpeed) newVel.y += config.acceleration;
         }
       }
-      // Additional directional properties, if any.
+      // Additional directional properties.
       if (player.left)  { if (newVel.x > -config.maxSpeed) newVel.x -= config.acceleration; }
       if (player.right) { if (newVel.x < config.maxSpeed) newVel.x += config.acceleration; }
       if (player.up)    { if (newVel.y > -config.maxSpeed) newVel.y -= config.acceleration; }
@@ -945,7 +946,7 @@ app.ticker.add((delta) => {
   }
   world.ClearForces();
 
-  // Update each player's sprite position based on their physics body.
+  // Update each player's sprite based on their physics body.
   players.forEach(player => {
     const pos = player.GetPosition();
     const sprite = player.GetUserData().sprite;
@@ -954,7 +955,7 @@ app.ticker.add((delta) => {
     sprite.rotation = player.GetAngle();
   });
 
-  // Update the UI elements (name, degree, flair) for each player.
+  // Update UI elements (name, degree, flair) for each player.
   updatePlayerUI();
 
   // Center the camera on the controlled player's ball.
