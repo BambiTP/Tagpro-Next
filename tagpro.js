@@ -896,16 +896,14 @@ nameColor = data.auth ? 0xBFFF00 : 0xFFFFFF;
     if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key)) e.preventDefault();
     keys[e.key] = false;
   });
-
-  // ------------------------------------------------------------------
-  // Main ticker loop
+///////////////
 let accumulator = 0;
 
 app.ticker.add(() => {
   // Clamp dt to avoid huge jumps.
   const dt = Math.min(app.ticker.deltaMS / 1000, 0.05);
   accumulator += dt;
-
+  
   // Process fixed-step physics updates.
   while (accumulator >= config.baseDT) {
     // Process input for each player inside the fixed timestep.
@@ -914,42 +912,42 @@ app.ticker.add(() => {
       if (data.canMove) {
         const currentVel = player.GetLinearVelocity();
         const newVel = new b2Vec2(currentVel.x, currentVel.y);
-
-        // For controlled players, apply acceleration scaled by the fixed delta.
+        
         if (data.controlled) {
           if (keys["ArrowLeft"] || keys["a"] || keys["A"]) {
-            newVel.x -= config.acceleration * config.baseDT;
+            newVel.x -= config.acceleration;
           }
           if (keys["ArrowRight"] || keys["d"] || keys["D"]) {
-            newVel.x += config.acceleration * config.baseDT;
+            newVel.x += config.acceleration;
           }
           if (keys["ArrowUp"] || keys["w"] || keys["W"]) {
-            newVel.y -= config.acceleration * config.baseDT;
+            newVel.y -= config.acceleration;
           }
           if (keys["ArrowDown"] || keys["s"] || keys["S"]) {
-            newVel.y += config.acceleration * config.baseDT;
+            newVel.y += config.acceleration;
           }
         }
-        // If you have additional directional properties, apply them here:
-        if (player.left)  { newVel.x -= config.acceleration * config.baseDT; }
-        if (player.right) { newVel.x += config.acceleration * config.baseDT; }
-        if (player.up)    { newVel.y -= config.acceleration * config.baseDT; }
-        if (player.down)  { newVel.y += config.acceleration * config.baseDT; }
-
+        // Additional directional properties, if any.
+        if (player.left)  { newVel.x -= config.acceleration; }
+        if (player.right) { newVel.x += config.acceleration; }
+        if (player.up)    { newVel.y -= config.acceleration; }
+        if (player.down)  { newVel.y += config.acceleration; }
+        
         player.SetLinearVelocity(newVel);
         player.SetAwake(true);
       } else {
         player.SetLinearVelocity(new b2Vec2(0, 0));
       }
     });
-
+    
     // Step the physics simulation using the fixed time step.
     world.Step(config.baseDT, 8, 3);
     accumulator -= config.baseDT;
   }
+  
   world.ClearForces();
-
-  // Update each player's sprite based on the physics simulation.
+  
+  // Update each player's sprite based on their physics simulation.
   players.forEach(player => {
     const pos = player.GetPosition();
     const sprite = player.GetUserData().sprite;
@@ -957,10 +955,10 @@ app.ticker.add(() => {
     sprite.y = pos.y * config.pixPerTPU;
     sprite.rotation = player.GetAngle();
   });
-
+  
   // Update UI elements (name, degree, flair).
   updatePlayerUI();
-
+  
   // Center the camera on the controlled player's sprite.
   const controlledPlayer = players.find(p => p.GetUserData().controlled);
   if (controlledPlayer) {
@@ -968,7 +966,7 @@ app.ticker.add(() => {
     worldContainer.x = app.screen.width / 2 - cs.x;
     worldContainer.y = app.screen.height / 2 - cs.y;
   }
-
+  
   // Flag pickup logic.
   if (!flag.taken && flagSprite) {
     const pickupDistance = 15 + 19;
@@ -992,7 +990,7 @@ app.ticker.add(() => {
       }
     });
   }
-
+  
   // Update the mini flag sprite so it follows the flag carrier.
   if (miniFlagSprite) {
     if (flag.carrier) {
