@@ -902,50 +902,54 @@ nameColor = data.auth ? 0xBFFF00 : 0xFFFFFF;
 let accumulator = 0;
 
 app.ticker.add(() => {
-  // Clamp dt to a maximum to prevent huge jumps (e.g., 50ms).
+  // Clamp dt to avoid huge jumps.
   const dt = Math.min(app.ticker.deltaMS / 1000, 0.05);
   accumulator += dt;
 
-  // Process input for each player.
-  players.forEach(player => {
-    const data = player.GetUserData();
-    if (data.canMove) {
-      const currentVel = player.GetLinearVelocity();
-      const newVel = new b2Vec2(currentVel.x, currentVel.y);
-      if (data.controlled) {
-        if (keys["ArrowLeft"] || keys["a"] || keys["A"]) {
-          if (newVel.x > -config.maxSpeed) newVel.x -= config.acceleration;
-        }
-        if (keys["ArrowRight"] || keys["d"] || keys["D"]) {
-          if (newVel.x < config.maxSpeed) newVel.x += config.acceleration;
-        }
-        if (keys["ArrowUp"] || keys["w"] || keys["W"]) {
-          if (newVel.y > -config.maxSpeed) newVel.y -= config.acceleration;
-        }
-        if (keys["ArrowDown"] || keys["s"] || keys["S"]) {
-          if (newVel.y < config.maxSpeed) newVel.y += config.acceleration;
-        }
-      }
-      // Additional directional properties.
-      if (player.left)  { if (newVel.x > -config.maxSpeed) newVel.x -= config.acceleration; }
-      if (player.right) { if (newVel.x < config.maxSpeed) newVel.x += config.acceleration; }
-      if (player.up)    { if (newVel.y > -config.maxSpeed) newVel.y -= config.acceleration; }
-      if (player.down)  { if (newVel.y < config.maxSpeed) newVel.y += config.acceleration; }
-      player.SetLinearVelocity(newVel);
-      player.SetAwake(true);
-    } else {
-      player.SetLinearVelocity(new b2Vec2(0, 0));
-    }
-  });
-
-  // Step the physics world in fixed increments.
+  // Process fixed-step physics updates.
   while (accumulator >= config.baseDT) {
+    // Process input for each player inside the fixed timestep.
+    players.forEach(player => {
+      const data = player.GetUserData();
+      if (data.canMove) {
+        const currentVel = player.GetLinearVelocity();
+        const newVel = new b2Vec2(currentVel.x, currentVel.y);
+
+        // For controlled players, apply acceleration scaled by the fixed delta.
+        if (data.controlled) {
+          if (keys["ArrowLeft"] || keys["a"] || keys["A"]) {
+            newVel.x -= config.acceleration * config.baseDT;
+          }
+          if (keys["ArrowRight"] || keys["d"] || keys["D"]) {
+            newVel.x += config.acceleration * config.baseDT;
+          }
+          if (keys["ArrowUp"] || keys["w"] || keys["W"]) {
+            newVel.y -= config.acceleration * config.baseDT;
+          }
+          if (keys["ArrowDown"] || keys["s"] || keys["S"]) {
+            newVel.y += config.acceleration * config.baseDT;
+          }
+        }
+        // If you have additional directional properties, apply them here:
+        if (player.left)  { newVel.x -= config.acceleration * config.baseDT; }
+        if (player.right) { newVel.x += config.acceleration * config.baseDT; }
+        if (player.up)    { newVel.y -= config.acceleration * config.baseDT; }
+        if (player.down)  { newVel.y += config.acceleration * config.baseDT; }
+
+        player.SetLinearVelocity(newVel);
+        player.SetAwake(true);
+      } else {
+        player.SetLinearVelocity(new b2Vec2(0, 0));
+      }
+    });
+
+    // Step the physics simulation using the fixed time step.
     world.Step(config.baseDT, 8, 3);
     accumulator -= config.baseDT;
   }
   world.ClearForces();
 
-  // Update each player's sprite based on their physics body.
+  // Update each player's sprite based on the physics simulation.
   players.forEach(player => {
     const pos = player.GetPosition();
     const sprite = player.GetUserData().sprite;
@@ -954,10 +958,10 @@ app.ticker.add(() => {
     sprite.rotation = player.GetAngle();
   });
 
-  // Update UI elements (name, degree, flair) for each player.
+  // Update UI elements (name, degree, flair).
   updatePlayerUI();
 
-  // Center the camera on the controlled player's ball.
+  // Center the camera on the controlled player's sprite.
   const controlledPlayer = players.find(p => p.GetUserData().controlled);
   if (controlledPlayer) {
     const cs = controlledPlayer.GetUserData().sprite;
