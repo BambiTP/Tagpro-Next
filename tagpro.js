@@ -899,7 +899,6 @@ nameColor = data.auth ? 0xBFFF00 : 0xFFFFFF;
 
   // ------------------------------------------------------------------
   // Main ticker loop
- let accumulator = 0;
 let accumulator = 0;
 
 app.ticker.add(() => {
